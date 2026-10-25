@@ -69,7 +69,10 @@
           🍸
         </div>
         <div>
-          <h1 class="text-base sm:text-lg font-bold tracking-tight text-white leading-tight">Списания на баре</h1>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-bold tracking-tight text-white leading-tight">Списания на баре</h1>
+            <span id="sync-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-medium">Локально</span>
+          </div>
           <p id="current-date-label" class="text-xs text-slate-400"></p>
         </div>
       </div>
@@ -126,16 +129,21 @@
       <!-- Main Write-off Form -->
       <form id="writeoff-form" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg space-y-4">
         
-        <!-- Date & Time + Product Name -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <!-- Date, Bartender & Product Name -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label for="input-date" class="block text-xs font-medium text-slate-400 mb-1">Дата списания</label>
             <input id="input-date" type="date" required class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
           </div>
-          <div class="sm:col-span-2">
-            <label for="input-product" class="block text-xs font-medium text-slate-400 mb-1">Продукт / Напиток / Заготовка</label>
-            <input id="input-product" type="text" required placeholder="Например: Лайм, Молоко 3.2%, Апероль..." class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
+          <div>
+            <label for="input-bartender" class="block text-xs font-medium text-slate-400 mb-1">Кто списывает (бармен)</label>
+            <input id="input-bartender" type="text" placeholder="Имя или ник сменщика" class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
           </div>
+        </div>
+
+        <div>
+          <label for="input-product" class="block text-xs font-medium text-slate-400 mb-1">Продукт / Напиток / Заготовка</label>
+          <input id="input-product" type="text" required placeholder="Например: Лайм, Молоко 3.2%, Апероль..." class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
         </div>
 
         <!-- Quantity & Unit -->
@@ -201,7 +209,7 @@
         </div>
 
         <!-- Submit Button -->
-        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-slate-950 font-bold py-3 px-4 rounded-xl shadow-lg shadow-amber-500/10 transition-all text-sm sm:text-base flex items-center justify-center gap-2">
+        <button id="btn-submit-entry" type="submit" class="w-full bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-slate-950 font-bold py-3 px-4 rounded-xl shadow-lg shadow-amber-500/10 transition-all text-sm sm:text-base flex items-center justify-center gap-2">
           <span>Записать в журнал</span>
         </button>
       </form>
@@ -210,7 +218,10 @@
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg">
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Последние записи за смену</h2>
-          <button id="btn-goto-history" class="text-xs text-amber-400 hover:text-amber-300 font-medium">Весь список →</button>
+          <div class="flex items-center gap-3">
+            <button id="btn-refresh-recent" class="text-xs text-slate-400 hover:text-white flex items-center gap-1" title="Обновить из облака">🔄 Обновить</button>
+            <button id="btn-goto-history" class="text-xs text-amber-400 hover:text-amber-300 font-medium">Весь список →</button>
+          </div>
         </div>
         <div id="recent-list" class="space-y-2">
           <!-- Populated by JS -->
@@ -226,8 +237,11 @@
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 class="text-base font-bold text-white">Журнал списаний</h2>
-            <p class="text-xs text-slate-400">Экспортируй в таблицу или скопируй готовый отчет для отправки в Telegram</p>
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <span>Общий журнал списаний</span>
+              <button id="btn-refresh-cloud" class="text-xs bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 px-2.5 py-1 rounded-lg font-medium transition-all">🔄 Синхронизировать</button>
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">Все записи команды бара. Выгружай отчет в 1 клик:</p>
           </div>
           <div class="flex flex-wrap gap-2">
             <button id="btn-copy-tg" class="bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 px-3 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5">
@@ -247,7 +261,7 @@
 
         <!-- Filters -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-800">
-          <input id="filter-search" type="text" placeholder="Поиск по продукту..." class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+          <input id="filter-search" type="text" placeholder="Поиск (продукт, бармен)..." class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
           <select id="filter-reason" class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
             <option value="ALL">Все причины</option>
             <option value="Порча продукта">🥀 Порча продукта</option>
@@ -279,7 +293,7 @@
 
       <!-- Confirm Clear Modal Box (Inline) -->
       <div id="confirm-clear-box" class="hidden bg-rose-950/50 border border-rose-500/40 rounded-2xl p-4 flex items-center justify-between">
-        <span class="text-xs sm:text-sm text-rose-200">Точно удалить все записи из журнала?</span>
+        <span class="text-xs sm:text-sm text-rose-200">Точно очистить локальный журнал на этом устройстве?</span>
         <div class="flex gap-2">
           <button id="btn-confirm-clear-yes" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg">Да, очистить</button>
           <button id="btn-confirm-clear-no" class="bg-slate-800 text-slate-300 text-xs px-3 py-1.5 rounded-lg">Отмена</button>
@@ -288,27 +302,27 @@
 
     </section>
 
-    <!-- VIEW 3: GOOGLE SHEETS SYNC & TELEGRAM BOT SCRIPT -->
+    <!-- VIEW 3: SHARED CLOUD SYNC & TELEGRAM BOT SCRIPT -->
     <section id="view-sync" class="hidden space-y-5">
       
-      <!-- Option A: Direct Webhook to Google Sheets from this Web App -->
+      <!-- Shared Cloud Journal via Google Sheets (2-way sync) -->
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg space-y-3">
         <div class="flex items-center gap-2">
-          <span class="text-lg">📊</span>
-          <h2 class="text-base font-bold text-white">Авто-отправка в Google Таблицу прямо отсюда</h2>
+          <span class="text-lg">👥</span>
+          <h2 class="text-base font-bold text-white">Общий журнал для всех сменщиков (2-сторонняя синхронизация)</h2>
         </div>
         <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-          Это веб-приложение можно открыть в браузере телефона, нажать <strong>«На экран Домой»</strong> (будет иконка как у обычного приложения) и подключить к твоей Google Таблице бесплатно за 2 минуты:
+          Чтобы и ты, и твои сменщики со своих телефонов видели <strong>один общий журнал внутри приложения</strong>, подключи общую Google Таблицу в качестве бесплатной облачной базы:
         </p>
         <ol class="text-xs text-slate-300 space-y-1.5 list-decimal list-inside bg-slate-800/60 p-3 rounded-xl border border-slate-700/60">
-          <li>Создай новую Google Таблицу на своем Google Диске.</li>
-          <li>В верхнем меню таблицы нажми <strong>Расширения → Apps Script</strong>.</li>
-          <li>Вставь короткий скрипт ниже и нажми <strong>Начать развертывание → Новое развертывание → Веб-приложение</strong> (доступ: <em>Все</em>).</li>
-          <li>Скопируй полученную ссылку (URL) и вставь в поле ниже — каждая запись будет мгновенно падать строкой в таблицу!</li>
+          <li>Создай новую Google Таблицу на Google Диске и открой <strong>Расширения → Apps Script</strong>.</li>
+          <li>Удали всё, что там написано, и вставь <strong>новый двухсторонний код</strong> ниже (он умеет и сохранять записи от всех барменов, и отдавать общий список обратно в приложение).</li>
+          <li>Нажми <strong>Начать развертывание → Новое развертывание → Веб-приложение</strong> (У кого есть доступ: <strong>Все / Anyone</strong>).</li>
+          <li>Скопируй полученную ссылку `https://script.google.com/macros/s/.../exec` и вставь в поле ниже (или пропиши её один раз в коде `DEFAULT_CLOUD_URL` на GitHub, чтобы у всех сменщиков всё работало сразу без настроек!).</li>
         </ol>
 
         <div class="space-y-2 pt-1">
-          <label for="webhook-url-input" class="block text-xs font-medium text-slate-400">URL веб-приложения Google Apps Script (необязательно)</label>
+          <label for="webhook-url-input" class="block text-xs font-medium text-slate-400">Ссылка на общую базу (Google Apps Script URL)</label>
           <div class="flex gap-2">
             <input id="webhook-url-input" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
             <button id="btn-save-webhook" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold px-3.5 py-2 rounded-xl text-xs">Сохранить</button>
@@ -316,24 +330,66 @@
           <p id="webhook-status" class="text-[11px] text-slate-400"></p>
         </div>
 
-        <!-- Google Apps Script Code -->
+        <!-- Google Apps Script Code (Two-Way) -->
         <div class="pt-2">
           <div class="flex items-center justify-between mb-1.5">
-            <span class="text-xs font-semibold text-slate-400">Код для Google Таблицы (Apps Script):</span>
+            <span class="text-xs font-semibold text-slate-400">Двухсторонний код для Google Таблицы (Apps Script):</span>
             <button id="btn-copy-gas" class="text-xs text-amber-400 hover:text-amber-300 font-medium">Скопировать код</button>
           </div>
-          <pre id="gas-code" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] text-emerald-300 overflow-x-auto custom-scrollbar">function doPost(e) {
+          <pre id="gas-code" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] text-emerald-300 overflow-x-auto custom-scrollbar">function doGet(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var rows = sheet.getDataRange().getValues();
+  var result = [];
+  for (var i = 1; i &lt; rows.length; i++) {
+    var r = rows[i];
+    if (!r[0] &amp;&amp; !r[3]) continue;
+    result.push({
+      id: String(r[0]),
+      date: String(r[1]),
+      time: String(r[2]),
+      product: String(r[3]),
+      qty: Number(r[4]) || 0,
+      unit: String(r[5]),
+      reason: String(r[6]),
+      bartender: String(r[7] || ""),
+      comment: String(r[8] || "")
+    });
+  }
+  result.reverse();
+  return ContentService.createTextOutput(JSON.stringify({ status: "ok", entries: result }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(["ID", "Дата", "Время", "Продукт", "Кол-во", "Ед.", "Причина", "Бармен", "Комментарий"]);
+  }
   var data = JSON.parse(e.postData.contents);
+  if (data.action === "delete" &amp;&amp; data.id) {
+    var rows = sheet.getDataRange().getValues();
+    for (var i = rows.length - 1; i &gt;= 1; i--) {
+      if (String(rows[i][0]) === String(data.id)) {
+        sheet.deleteRow(i + 1);
+        break;
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify({ status: "deleted" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
   sheet.appendRow([
+    data.id,
     data.date,
+    data.time || "",
     data.product,
     data.qty,
     data.unit,
     data.reason,
+    data.bartender || "",
     data.comment || ""
   ]);
-  return ContentService.createTextOutput("OK");
+  return ContentService.createTextOutput(JSON.stringify({ status: "added" }))
+    .setMimeType(ContentService.MimeType.JSON);
 }</pre>
         </div>
       </div>
@@ -343,15 +399,11 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
             <span class="text-lg">🤖</span>
-            <h2 class="text-base font-bold text-white">Идея №2: Telegram-бот с кнопками</h2>
+            <h2 class="text-base font-bold text-white">Код отдельного Telegram-бота (по желанию)</h2>
           </div>
           <button id="btn-copy-bot" class="text-xs bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 px-3 py-1.5 rounded-lg font-medium">Скопировать Python-код</button>
         </div>
-        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-          Если решишь запустить полноценного бота в Telegram: бот по шагам спрашивает продукт → количество → показывает кнопки <strong>«Порча», «Комплимент гостю», «Проработка», «Выдача начальству»</strong> и сохраняет строку в таблицу или CSV. Кроме того, прямо в Telegram можно встроить это веб-приложение как кнопку <strong>WebApp</strong>!
-        </p>
-        <pre id="bot-code" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] text-sky-300 overflow-x-auto custom-scrollbar max-h-60"># Готовый Telegram-бот для списаний на баре (aiogram 3.x)
-# Установка: pip install aiogram gspread
+        <pre id="bot-code" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] text-sky-300 overflow-x-auto custom-scrollbar max-h-48"># Готовый Telegram-бот для списаний на баре (aiogram 3.x)
 import asyncio, csv
 from datetime import datetime
 from aiogram import Bot, Dispatcher, F
@@ -377,7 +429,7 @@ dp = Dispatcher()
 @dp.message(F.text == "/start")
 async def start(msg: Message, state: FSMContext):
     await state.set_state(WriteOff.product)
-    await msg.answer("🍸 Введи название продукта для списания (например: Лайм, Молоко, Мята):")
+    await msg.answer("🍸 Введи название продукта для списания:")
 
 @dp.message(WriteOff.product)
 async def get_product(msg: Message, state: FSMContext):
@@ -396,13 +448,12 @@ async def get_qty(msg: Message, state: FSMContext):
 async def get_reason(msg: Message, state: FSMContext):
     data = await state.get_data()
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    row = [now, data["product"], data["qty"], msg.text]
+    user = msg.from_user.first_name if msg.from_user else "Бармен"
+    row = [now, data["product"], data["qty"], msg.text, user]
     with open("writeoffs.csv", "a", newline="", encoding="utf-8") as f:
         csv.writer(f).writerow(row)
     await state.clear()
-    await msg.answer(
-        f"✅ Списано:\n📅 {now}\n🍋 {data['product']} — {data['qty']}\n📌 {msg.text}\n\nЧтобы записать еще — напиши любой продукт или /start"
-    )
+    await msg.answer(f"✅ Списано ({user}):\n📅 {now}\n🍋 {data['product']} — {data['qty']}\n📌 {msg.text}")
 
 async def main():
     bot = Bot(TOKEN)
@@ -418,9 +469,14 @@ if __name__ == "__main__":
 
   <script>
     (function() {
+      // ЕСЛИ ХОЧЕШЬ, ЧТОБЫ У ВСЕХ СМЕНЩИКОВ БАЗА ПОДКЛЮЧАЛАСЬ АВТОМАТИЧЕСКИ БЕЗ НАСТРОЕК,
+      // ВСТАВЬ СВОЮ ССЫЛКУ GOOGLE APPS SCRIPT В КАВЫЧКИ НИЖЕ:
+      const DEFAULT_CLOUD_URL = '';
+
       const STORAGE_KEY = 'bar_writeoffs_v1';
       const PRESETS_KEY = 'bar_presets_v1';
       const WEBHOOK_KEY = 'bar_webhook_v1';
+      const BARTENDER_KEY = 'bar_bartender_name_v1';
 
       const defaultPresets = [
         { name: 'Лайм', unit: 'г' },
@@ -446,6 +502,7 @@ if __name__ == "__main__":
           qty: 85,
           unit: 'г',
           reason: 'Порча продукта',
+          bartender: 'Алекс',
           comment: 'Почернела после поставки'
         },
         {
@@ -456,6 +513,7 @@ if __name__ == "__main__":
           qty: 1,
           unit: 'шт',
           reason: 'Комплимент гостю',
+          bartender: 'Макс',
           comment: 'Постоянный гость за баром'
         },
         {
@@ -466,6 +524,7 @@ if __name__ == "__main__":
           qty: 120,
           unit: 'г',
           reason: 'Проработка',
+          bartender: 'Алекс',
           comment: 'Тест сезонного сауэра'
         },
         {
@@ -476,13 +535,15 @@ if __name__ == "__main__":
           qty: 2,
           unit: 'шт',
           reason: 'Выдача начальству',
+          bartender: 'Макс',
           comment: 'Управляющий'
         }
       ];
 
       let entries = loadFromStorage(STORAGE_KEY, sampleEntries);
       let presets = loadFromStorage(PRESETS_KEY, defaultPresets);
-      let webhookUrl = loadFromStorage(WEBHOOK_KEY, '');
+      let webhookUrl = DEFAULT_CLOUD_URL || loadFromStorage(WEBHOOK_KEY, '');
+      let savedBartender = loadFromStorage(BARTENDER_KEY, '');
 
       let selectedUnit = 'мл';
       let selectedReason = 'Порча продукта';
@@ -539,6 +600,41 @@ if __name__ == "__main__":
         }, 2600);
       }
 
+      function updateSyncBadge(stateText, isCloudActive) {
+        const badge = document.getElementById('sync-badge');
+        badge.textContent = stateText;
+        badge.className = isCloudActive
+          ? 'text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-medium'
+          : 'text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-medium';
+      }
+
+      // Fetch shared entries from Google Sheets (GET)
+      async function syncFromCloud(showNotification = false) {
+        if (!webhookUrl) {
+          updateSyncBadge('Локально', false);
+          return;
+        }
+        updateSyncBadge('Синхронизация...', true);
+        try {
+          const res = await fetch(webhookUrl + '?t=' + Date.now(), {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
+          });
+          const data = await res.json();
+          if (data && Array.isArray(data.entries)) {
+            entries = data.entries;
+            saveToStorage(STORAGE_KEY, entries);
+            updateBadgeAndRecent();
+            renderHistory();
+            updateSyncBadge('Общий журнал ✓', true);
+            if (showNotification) showToast('Общий журнал обновлен!');
+          }
+        } catch (err) {
+          updateSyncBadge('Облако подключено', true);
+          if (showNotification) showToast('Не удалось загрузить список (проверь доступ Все / Anyone)', false);
+        }
+      }
+
       function copyTextToClipboard(text, successMsg) {
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(text).then(() => {
@@ -590,6 +686,7 @@ if __name__ == "__main__":
           viewHistory.classList.remove('hidden');
           tabHistory.className = 'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-amber-500 text-slate-950 shadow-sm flex items-center gap-1.5';
           renderHistory();
+          if (webhookUrl) syncFromCloud(false);
         } else if (tab === 'sync') {
           viewSync.classList.remove('hidden');
           tabSync.className = 'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-amber-500 text-slate-950 shadow-sm';
@@ -600,12 +697,14 @@ if __name__ == "__main__":
       tabHistory.addEventListener('click', () => switchTab('history'));
       tabSync.addEventListener('click', () => switchTab('sync'));
       document.getElementById('btn-goto-history').addEventListener('click', () => switchTab('history'));
+      document.getElementById('btn-refresh-recent').addEventListener('click', () => syncFromCloud(true));
+      document.getElementById('btn-refresh-cloud').addEventListener('click', () => syncFromCloud(true));
 
       // Render Preset Chips
       function renderPresets() {
         const container = document.getElementById('preset-chips');
         container.innerHTML = '';
-        presets.forEach((p, idx) => {
+        presets.forEach((p) => {
           const btn = document.createElement('button');
           btn.type = 'button';
           btn.className = 'text-xs bg-slate-800 hover:bg-slate-700 active:bg-amber-500 active:text-slate-950 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5';
@@ -720,6 +819,7 @@ if __name__ == "__main__":
       document.getElementById('writeoff-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const dateVal = document.getElementById('input-date').value || getTodayISO();
+        const bartenderVal = document.getElementById('input-bartender').value.trim() || 'Бармен';
         const productVal = document.getElementById('input-product').value.trim();
         const qtyVal = parseFloat(document.getElementById('input-qty').value);
         const commentVal = document.getElementById('input-comment').value.trim();
@@ -729,6 +829,8 @@ if __name__ == "__main__":
           return;
         }
 
+        saveToStorage(BARTENDER_KEY, bartenderVal);
+
         const newEntry = {
           id: 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
           date: dateVal,
@@ -737,6 +839,7 @@ if __name__ == "__main__":
           qty: qtyVal,
           unit: selectedUnit,
           reason: selectedReason,
+          bartender: bartenderVal,
           comment: commentVal
         };
 
@@ -751,27 +854,41 @@ if __name__ == "__main__":
         updateBadgeAndRecent();
         showToast(`Списано: ${newEntry.product} (${newEntry.qty} ${newEntry.unit})`);
 
-        // Optional Webhook to Google Sheets
+        // Push to Shared Google Sheets Cloud
         if (webhookUrl) {
           try {
             await fetch(webhookUrl, {
               method: 'POST',
               mode: 'no-cors',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
               body: JSON.stringify(newEntry)
             });
+            setTimeout(() => syncFromCloud(false), 1200);
           } catch (err) {
-            // ignore network error in sandbox
+            // ignore network error
           }
         }
       });
 
-      function deleteEntry(id) {
+      async function deleteEntry(id) {
         entries = entries.filter(item => item.id !== id);
         saveToStorage(STORAGE_KEY, entries);
         updateBadgeAndRecent();
         renderHistory();
         showToast('Запись удалена', false);
+
+        if (webhookUrl) {
+          try {
+            await fetch(webhookUrl, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({ action: 'delete', id: id })
+            });
+          } catch (err) {
+            // ignore
+          }
+        }
       }
 
       function updateBadgeAndRecent() {
@@ -795,8 +912,9 @@ if __name__ == "__main__":
                 <span class="text-xs font-bold text-amber-400">${escapeHtml(item.qty)} ${escapeHtml(item.unit)}</span>
                 ${getReasonBadge(item.reason)}
               </div>
-              <div class="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
+              <div class="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap">
                 <span>${escapeHtml(item.date)} ${escapeHtml(item.time || '')}</span>
+                ${item.bartender ? `<span class="text-amber-300/90 font-medium">👤 ${escapeHtml(item.bartender)}</span>` : ''}
                 ${item.comment ? `<span>• ${escapeHtml(item.comment)}</span>` : ''}
               </div>
             </div>
@@ -814,7 +932,10 @@ if __name__ == "__main__":
         const d = document.getElementById('filter-date').value;
 
         return entries.filter(item => {
-          const matchQ = !q || item.product.toLowerCase().includes(q) || (item.comment && item.comment.toLowerCase().includes(q));
+          const matchQ = !q ||
+            (item.product && item.product.toLowerCase().includes(q)) ||
+            (item.comment && item.comment.toLowerCase().includes(q)) ||
+            (item.bartender && item.bartender.toLowerCase().includes(q));
           const matchR = r === 'ALL' || item.reason === r;
           const matchD = !d || item.date === d;
           return matchQ && matchR && matchD;
@@ -874,6 +995,7 @@ if __name__ == "__main__":
               </div>
               <div class="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-2">
                 <span>📅 ${escapeHtml(item.date)} ${escapeHtml(item.time || '')}</span>
+                ${item.bartender ? `<span class="text-amber-300 font-medium">👤 ${escapeHtml(item.bartender)}</span>` : ''}
                 ${item.comment ? `<span class="text-slate-300">💬 ${escapeHtml(item.comment)}</span>` : ''}
               </div>
             </div>
@@ -908,7 +1030,7 @@ if __name__ == "__main__":
         document.getElementById('confirm-clear-box').classList.add('hidden');
         updateBadgeAndRecent();
         renderHistory();
-        showToast('Журнал полностью очищен');
+        showToast('Локальный кэш очищен');
       });
 
       // Export 1: Telegram Text Summary
@@ -921,8 +1043,9 @@ if __name__ == "__main__":
         const dateHeader = document.getElementById('filter-date').value || getTodayISO();
         let lines = [`🍸 СПИСАНИЯ ПО БАРУ (${dateHeader}):`, ''];
         list.forEach((item, i) => {
+          const who = item.bartender ? ` [${item.bartender}]` : '';
           const note = item.comment ? ` (${item.comment})` : '';
-          lines.push(`${i + 1}. ${item.product} — ${item.qty} ${item.unit} | ${item.reason}${note}`);
+          lines.push(`${i + 1}. ${item.product} — ${item.qty} ${item.unit} | ${item.reason}${who}${note}`);
         });
         copyTextToClipboard(lines.join('\n'), 'Отчет для Telegram скопирован в буфер!');
       });
@@ -934,7 +1057,7 @@ if __name__ == "__main__":
           showToast('Нет записей для копирования', false);
           return;
         }
-        let rows = [['Дата', 'Время', 'Продукт', 'Количество', 'Ед. изм.', 'Причина', 'Комментарий'].join('\t')];
+        let rows = [['Дата', 'Время', 'Продукт', 'Количество', 'Ед. изм.', 'Причина', 'Бармен', 'Комментарий'].join('\t')];
         list.forEach(item => {
           rows.push([
             item.date,
@@ -943,6 +1066,7 @@ if __name__ == "__main__":
             String(item.qty).replace('.', ','),
             item.unit,
             item.reason,
+            item.bartender || '',
             item.comment || ''
           ].join('\t'));
         });
@@ -956,7 +1080,7 @@ if __name__ == "__main__":
           showToast('Нет записей для скачивания', false);
           return;
         }
-        const headers = ['Дата', 'Время', 'Продукт', 'Количество', 'Ед. изм.', 'Причина', 'Комментарий'];
+        const headers = ['Дата', 'Время', 'Продукт', 'Количество', 'Ед. изм.', 'Причина', 'Бармен', 'Комментарий'];
         const csvRows = [headers.join(';')];
         list.forEach(item => {
           const row = [
@@ -966,6 +1090,7 @@ if __name__ == "__main__":
             String(item.qty).replace('.', ','),
             item.unit,
             `"${(item.reason || '').replace(/"/g, '""')}"`,
+            `"${(item.bartender || '').replace(/"/g, '""')}"`,
             `"${(item.comment || '').replace(/"/g, '""')}"`
           ];
           csvRows.push(row.join(';'));
@@ -988,20 +1113,21 @@ if __name__ == "__main__":
       const webhookStatus = document.getElementById('webhook-status');
       webhookInput.value = webhookUrl;
       webhookStatus.textContent = webhookUrl
-        ? '✅ Авто-отправка в Google Таблицу включена'
-        : 'Пока не подключено — записи сохраняются локально в телефоне/браузере.';
+        ? '✅ Общий облачный журнал подключен: все сменщики видят единую историю.'
+        : 'Пока не подключено — записи сохраняются только на этом устройстве.';
 
       document.getElementById('btn-save-webhook').addEventListener('click', () => {
         webhookUrl = webhookInput.value.trim();
         saveToStorage(WEBHOOK_KEY, webhookUrl);
         webhookStatus.textContent = webhookUrl
-          ? '✅ Авто-отправка в Google Таблицу включена'
-          : 'Пока не подключено — записи сохраняются локально в телефоне/браузере.';
-        showToast('Настройки таблицы сохранены');
+          ? '✅ Общий облачный журнал подключен: все сменщики видят единую историю.'
+          : 'Пока не подключено — записи сохраняются только на этом устройстве.';
+        showToast('Общая база подключена!');
+        if (webhookUrl) syncFromCloud(true);
       });
 
       document.getElementById('btn-copy-gas').addEventListener('click', () => {
-        copyTextToClipboard(document.getElementById('gas-code').textContent, 'Код для Google Таблицы скопирован!');
+        copyTextToClipboard(document.getElementById('gas-code').textContent, 'Двухсторонний код скопирован!');
       });
 
       document.getElementById('btn-copy-bot').addEventListener('click', () => {
@@ -1011,8 +1137,12 @@ if __name__ == "__main__":
       // Init Page
       document.getElementById('input-date').value = getTodayISO();
       document.getElementById('current-date-label').textContent = `Смена • ${getTodayISO()}`;
+      document.getElementById('input-bartender').value = savedBartender;
       renderPresets();
       updateBadgeAndRecent();
+      if (webhookUrl) {
+        syncFromCloud(false);
+      }
     })();
   </script>
 </body>
