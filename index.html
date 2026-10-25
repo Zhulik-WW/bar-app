@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Журнал списаний бара</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            bar: {
+              bg: '#0f172a',
+              card: '#1e293b',
+              border: '#334155',
+              accent: '#f59e0b',
+              accentHover: '#d97706'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      height: 4px;
+      width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #1e293b;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed top-4 right-4 left-4 sm:left-auto sm:w-96 z-50 transform transition-all duration-300 -translate-y-24 opacity-0 pointer-events-none">
+    <div id="toast-inner" class="bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-between border border-emerald-400/30">
+      <div class="flex items-center gap-2.5">
+        <span id="toast-icon" class="text-lg">✓</span>
+        <span id="toast-msg" class="text-sm font-medium">Запись сохранена</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3">
+    <div class="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-lg">
+          🍸
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight text-white leading-tight">Списания на баре</h1>
+          <p id="current-date-label" class="text-xs text-slate-400"></p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="flex bg-slate-800/80 p-1 rounded-xl border border-slate-700/60">
+        <button id="tab-btn-add" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-amber-500 text-slate-950 shadow-sm">
+          + Записать
+        </button>
+        <button id="tab-btn-history" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-300 hover:text-white flex items-center gap-1.5">
+          <span>Журнал</span>
+          <span id="badge-count" class="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-700 text-slate-200 font-semibold">0</span>
+        </button>
+        <button id="tab-btn-sync" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-300 hover:text-white">
+          TG / Таблица
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-3xl w-full mx-auto p-4 pb-20 space-y-6">
+
+    <!-- VIEW 1: ADD WRITE-OFF -->
+    <section id="view-add" class="space-y-5">
+      
+      <!-- Fast Presets Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg">
+        <div class="flex items-center justify-between mb-2.5">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Быстрый выбор позиции</span>
+          <button id="btn-toggle-preset-add" class="text-xs text-amber-400 hover:text-amber-300 font-medium">+ Своя кнопка</button>
+        </div>
+
+        <!-- Add Custom Preset Mini Form -->
+        <div id="custom-preset-box" class="hidden mb-3 p-3 bg-slate-800/70 rounded-xl border border-slate-700 space-y-2">
+          <div class="text-xs text-slate-300 font-medium">Добавить продукт в быстрые кнопки:</div>
+          <div class="flex gap-2">
+            <input id="new-preset-name" type="text" placeholder="Напр. Пюре маракуйя" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-amber-500">
+            <select id="new-preset-unit" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:border-amber-500">
+              <option value="г">г</option>
+              <option value="мл">мл</option>
+              <option value="шт">шт</option>
+              <option value="порц">порц</option>
+            </select>
+            <button id="btn-save-preset" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold px-3 py-1.5 rounded-lg text-xs">ОК</button>
+          </div>
+        </div>
+
+        <div id="preset-chips" class="flex flex-wrap gap-1.5">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Main Write-off Form -->
+      <form id="writeoff-form" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg space-y-4">
+        
+        <!-- Date & Time + Product Name -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label for="input-date" class="block text-xs font-medium text-slate-400 mb-1">Дата списания</label>
+            <input id="input-date" type="date" required class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
+          </div>
+          <div class="sm:col-span-2">
+            <label for="input-product" class="block text-xs font-medium text-slate-400 mb-1">Продукт / Напиток / Заготовка</label>
+            <input id="input-product" type="text" required placeholder="Например: Лайм, Молоко 3.2%, Апероль..." class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+
+        <!-- Quantity & Unit -->
+        <div>
+          <label for="input-qty" class="block text-xs font-medium text-slate-400 mb-1">Количество / Вес / Объем</label>
+          <div class="flex gap-2">
+            <input id="input-qty" type="number" step="any" min="0.01" required placeholder="Напр. 150" class="w-1/2 sm:w-2/3 bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-base font-semibold text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
+            <div id="unit-buttons" class="grid grid-cols-5 gap-1 flex-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
+              <button type="button" data-unit="мл" class="unit-btn rounded-lg text-xs font-semibold py-2 transition-all bg-amber-500 text-slate-950">мл</button>
+              <button type="button" data-unit="г" class="unit-btn rounded-lg text-xs font-semibold py-2 transition-all text-slate-300 hover:text-white">г</button>
+              <button type="button" data-unit="шт" class="unit-btn rounded-lg text-xs font-semibold py-2 transition-all text-slate-300 hover:text-white">шт</button>
+              <button type="button" data-unit="л" class="unit-btn rounded-lg text-xs font-semibold py-2 transition-all text-slate-300 hover:text-white">л</button>
+              <button type="button" data-unit="кг" class="unit-btn rounded-lg text-xs font-semibold py-2 transition-all text-slate-300 hover:text-white">кг</button>
+            </div>
+          </div>
+          <!-- Fast Quantity Increments -->
+          <div class="flex flex-wrap gap-1.5 mt-2">
+            <button type="button" data-addqty="1" class="quick-qty-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-lg">+1</button>
+            <button type="button" data-addqty="30" class="quick-qty-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-lg">+30</button>
+            <button type="button" data-addqty="50" class="quick-qty-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-lg">+50</button>
+            <button type="button" data-addqty="100" class="quick-qty-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-lg">+100</button>
+            <button type="button" data-addqty="250" class="quick-qty-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-lg">+250</button>
+            <button type="button" data-addqty="500" class="quick-qty-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-lg">+500</button>
+            <button type="button" id="btn-clear-qty" class="text-xs text-slate-400 hover:text-rose-400 px-2 py-1 ml-auto">Сброс</button>
+          </div>
+        </div>
+
+        <!-- Reason Selection -->
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">Причина списания</label>
+          <div id="reason-buttons" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <button type="button" data-reason="Порча продукта" class="reason-btn flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs sm:text-sm font-medium transition-all bg-rose-500/20 border-rose-500 text-white">
+              <span>🥀</span>
+              <span>Порча продукта</span>
+            </button>
+            <button type="button" data-reason="Комплимент гостю" class="reason-btn flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs sm:text-sm font-medium transition-all bg-slate-800/80 border-slate-700 text-slate-300 hover:border-slate-600">
+              <span>🎁</span>
+              <span>Комплимент гостю</span>
+            </button>
+            <button type="button" data-reason="Проработка" class="reason-btn flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs sm:text-sm font-medium transition-all bg-slate-800/80 border-slate-700 text-slate-300 hover:border-slate-600">
+              <span>🧪</span>
+              <span>Проработка</span>
+            </button>
+            <button type="button" data-reason="Выдача начальству" class="reason-btn flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs sm:text-sm font-medium transition-all bg-slate-800/80 border-slate-700 text-slate-300 hover:border-slate-600">
+              <span>👔</span>
+              <span>Выдача начальству</span>
+            </button>
+            <button type="button" data-reason="Бой / Разлив" class="reason-btn flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs sm:text-sm font-medium transition-all bg-slate-800/80 border-slate-700 text-slate-300 hover:border-slate-600">
+              <span>💥</span>
+              <span>Бой / Разлив</span>
+            </button>
+            <button type="button" data-reason="Другое" class="reason-btn flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs sm:text-sm font-medium transition-all bg-slate-800/80 border-slate-700 text-slate-300 hover:border-slate-600">
+              <span>📝</span>
+              <span>Другое</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Optional Note -->
+        <div>
+          <label for="input-comment" class="block text-xs font-medium text-slate-400 mb-1">Комментарий (необязательно)</label>
+          <input id="input-comment" type="text" placeholder="Напр. Стол №4, скисло молоко, тест нового коктейля..." class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-slate-950 font-bold py-3 px-4 rounded-xl shadow-lg shadow-amber-500/10 transition-all text-sm sm:text-base flex items-center justify-center gap-2">
+          <span>Записать в журнал</span>
+        </button>
+      </form>
+
+      <!-- Recent 3 Entries Preview -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Последние записи за смену</h2>
+          <button id="btn-goto-history" class="text-xs text-amber-400 hover:text-amber-300 font-medium">Весь список →</button>
+        </div>
+        <div id="recent-list" class="space-y-2">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- VIEW 2: HISTORY & EXPORT -->
+    <section id="view-history" class="hidden space-y-4">
+      
+      <!-- Summary & Export Actions -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-base font-bold text-white">Журнал списаний</h2>
+            <p class="text-xs text-slate-400">Экспортируй в таблицу или скопируй готовый отчет для отправки в Telegram</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button id="btn-copy-tg" class="bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 px-3 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5">
+              <span>📋</span>
+              <span>Отчет для Telegram</span>
+            </button>
+            <button id="btn-copy-sheets" class="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-3 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5">
+              <span>📊</span>
+              <span>Скопировать для Google Таблиц</span>
+            </button>
+            <button id="btn-download-csv" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5">
+              <span>⬇️</span>
+              <span>Скачать CSV</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-800">
+          <input id="filter-search" type="text" placeholder="Поиск по продукту..." class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+          <select id="filter-reason" class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+            <option value="ALL">Все причины</option>
+            <option value="Порча продукта">🥀 Порча продукта</option>
+            <option value="Комплимент гостю">🎁 Комплимент гостю</option>
+            <option value="Проработка">🧪 Проработка</option>
+            <option value="Выдача начальству">👔 Выдача начальству</option>
+            <option value="Бой / Разлив">💥 Бой / Разлив</option>
+            <option value="Другое">📝 Другое</option>
+          </select>
+          <input id="filter-date" type="date" class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+        </div>
+      </div>
+
+      <!-- Reason Breakdown Pills -->
+      <div id="stats-bar" class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Table / List of Entries -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
+        <div id="history-container" class="divide-y divide-slate-800">
+          <!-- Populated by JS -->
+        </div>
+        <div class="p-3 bg-slate-900/60 border-t border-slate-800 flex items-center justify-between">
+          <button id="btn-reset-filters" class="text-xs text-slate-400 hover:text-white">Сбросить фильтры</button>
+          <button id="btn-clear-all" class="text-xs text-rose-400 hover:text-rose-300 font-medium">Очистить журнал</button>
+        </div>
+      </div>
+
+      <!-- Confirm Clear Modal Box (Inline) -->
+      <div id="confirm-clear-box" class="hidden bg-rose-950/50 border border-rose-500/40 rounded-2xl p-4 flex items-center justify-between">
+        <span class="text-xs sm:text-sm text-rose-200">Точно удалить все записи из журнала?</span>
+        <div class="flex gap-2">
+          <button id="btn-confirm-clear-yes" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg">Да, очистить</button>
+          <button id="btn-confirm-clear-no" class="bg-slate-800 text-slate-300 text-xs px-3 py-1.5 rounded-lg">Отмена</button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- VIEW 3: GOOGLE SHEETS SYNC & TELEGRAM BOT SCRIPT -->
+    <section id="view-sync" class="hidden space-y-5">
+      
+      <!-- Option A: Direct Webhook to Google Sheets from this Web App -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg space-y-3">
+        <div class="flex items-center gap-2">
+          <span class="text-lg">📊</span>
+          <h2 class="text-base font-bold text-white">Авто-отправка в Google Таблицу прямо отсюда</h2>
+        </div>
+        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+          Это веб-приложение можно открыть в браузере телефона, нажать <strong>«На экран Домой»</strong> (будет иконка как у обычного приложения) и подключить к твоей Google Таблице бесплатно за 2 минуты:
+        </p>
+        <ol class="text-xs text-slate-300 space-y-1.5 list-decimal list-inside bg-slate-800/60 p-3 rounded-xl border border-slate-700/60">
+          <li>Создай новую Google Таблицу на своем Google Диске.</li>
+          <li>В верхнем меню таблицы нажми <strong>Расширения → Apps Script</strong>.</li>
+          <li>Вставь короткий скрипт ниже и нажми <strong>Начать развертывание → Новое развертывание → Веб-приложение</strong> (доступ: <em>Все</em>).</li>
+          <li>Скопируй полученную ссылку (URL) и вставь в поле ниже — каждая запись будет мгновенно падать строкой в таблицу!</li>
+        </ol>
+
+        <div class="space-y-2 pt-1">
+          <label for="webhook-url-input" class="block text-xs font-medium text-slate-400">URL веб-приложения Google Apps Script (необязательно)</label>
+          <div class="flex gap-2">
+            <input id="webhook-url-input" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+            <button id="btn-save-webhook" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold px-3.5 py-2 rounded-xl text-xs">Сохранить</button>
+          </div>
+          <p id="webhook-status" class="text-[11px] text-slate-400"></p>
+        </div>
+
+        <!-- Google Apps Script Code -->
+        <div class="pt-2">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-semibold text-slate-400">Код для Google Таблицы (Apps Script):</span>
+            <button id="btn-copy-gas" class="text-xs text-amber-400 hover:text-amber-300 font-medium">Скопировать код</button>
+          </div>
+          <pre id="gas-code" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] text-emerald-300 overflow-x-auto custom-scrollbar">function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = JSON.parse(e.postData.contents);
+  sheet.appendRow([
+    data.date,
+    data.product,
+    data.qty,
+    data.unit,
+    data.reason,
+    data.comment || ""
+  ]);
+  return ContentService.createTextOutput("OK");
+}</pre>
+        </div>
+      </div>
+
+      <!-- Option B: Telegram Bot Code -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">🤖</span>
+            <h2 class="text-base font-bold text-white">Идея №2: Telegram-бот с кнопками</h2>
+          </div>
+          <button id="btn-copy-bot" class="text-xs bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 px-3 py-1.5 rounded-lg font-medium">Скопировать Python-код</button>
+        </div>
+        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+          Если решишь запустить полноценного бота в Telegram: бот по шагам спрашивает продукт → количество → показывает кнопки <strong>«Порча», «Комплимент гостю», «Проработка», «Выдача начальству»</strong> и сохраняет строку в таблицу или CSV. Кроме того, прямо в Telegram можно встроить это веб-приложение как кнопку <strong>WebApp</strong>!
+        </p>
+        <pre id="bot-code" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] text-sky-300 overflow-x-auto custom-scrollbar max-h-60"># Готовый Telegram-бот для списаний на баре (aiogram 3.x)
+# Установка: pip install aiogram gspread
+import asyncio, csv
+from datetime import datetime
+from aiogram import Bot, Dispatcher, F
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+
+TOKEN = "ВСТАВЬ_ТОКЕН_ОТ_BOTFATHER"
+
+REASONS = [
+    [KeyboardButton(text="🥀 Порча продукта"), KeyboardButton(text="🎁 Комплимент гостю")],
+    [KeyboardButton(text="🧪 Проработка"), KeyboardButton(text="👔 Выдача начальству")],
+    [KeyboardButton(text="💥 Бой / Разлив")]
+]
+
+class WriteOff(StatesGroup):
+    product = State()
+    qty = State()
+    reason = State()
+
+dp = Dispatcher()
+
+@dp.message(F.text == "/start")
+async def start(msg: Message, state: FSMContext):
+    await state.set_state(WriteOff.product)
+    await msg.answer("🍸 Введи название продукта для списания (например: Лайм, Молоко, Мята):")
+
+@dp.message(WriteOff.product)
+async def get_product(msg: Message, state: FSMContext):
+    await state.update_data(product=msg.text)
+    await state.set_state(WriteOff.qty)
+    await msg.answer("⚖️ Укажи количество и единицу (например: 200 г, 50 мл, 2 шт):")
+
+@dp.message(WriteOff.qty)
+async def get_qty(msg: Message, state: FSMContext):
+    await state.update_data(qty=msg.text)
+    await state.set_state(WriteOff.reason)
+    kb = ReplyKeyboardMarkup(keyboard=REASONS, resize_keyboard=True, one_time_keyboard=True)
+    await msg.answer("📌 Выбери причину списания:", reply_markup=kb)
+
+@dp.message(WriteOff.reason)
+async def get_reason(msg: Message, state: FSMContext):
+    data = await state.get_data()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    row = [now, data["product"], data["qty"], msg.text]
+    with open("writeoffs.csv", "a", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerow(row)
+    await state.clear()
+    await msg.answer(
+        f"✅ Списано:\n📅 {now}\n🍋 {data['product']} — {data['qty']}\n📌 {msg.text}\n\nЧтобы записать еще — напиши любой продукт или /start"
+    )
+
+async def main():
+    bot = Bot(TOKEN)
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())</pre>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script>
+    (function() {
+      const STORAGE_KEY = 'bar_writeoffs_v1';
+      const PRESETS_KEY = 'bar_presets_v1';
+      const WEBHOOK_KEY = 'bar_webhook_v1';
+
+      const defaultPresets = [
+        { name: 'Лайм', unit: 'г' },
+        { name: 'Лимон', unit: 'г' },
+        { name: 'Мята свежая', unit: 'г' },
+        { name: 'Апельсин', unit: 'г' },
+        { name: 'Молоко 3.2%', unit: 'мл' },
+        { name: 'Сливки', unit: 'мл' },
+        { name: 'Альтернативное молоко', unit: 'мл' },
+        { name: 'Фреш лимонный', unit: 'мл' },
+        { name: 'Сироп сахарный', unit: 'мл' },
+        { name: 'Пюре маракуйя', unit: 'г' },
+        { name: 'Пиво разливное (пена/слив)', unit: 'мл' },
+        { name: 'Эспрессо (настройка помола)', unit: 'порц' }
+      ];
+
+      const sampleEntries = [
+        {
+          id: 'sample-1',
+          date: getTodayISO(),
+          time: '12:15',
+          product: 'Мята свежая',
+          qty: 85,
+          unit: 'г',
+          reason: 'Порча продукта',
+          comment: 'Почернела после поставки'
+        },
+        {
+          id: 'sample-2',
+          date: getTodayISO(),
+          time: '13:05',
+          product: 'Апероль Шприц',
+          qty: 1,
+          unit: 'шт',
+          reason: 'Комплимент гостю',
+          comment: 'Постоянный гость за баром'
+        },
+        {
+          id: 'sample-3',
+          date: getTodayISO(),
+          time: '13:40',
+          product: 'Пюре маракуйя',
+          qty: 120,
+          unit: 'г',
+          reason: 'Проработка',
+          comment: 'Тест сезонного сауэра'
+        },
+        {
+          id: 'sample-4',
+          date: getTodayISO(),
+          time: '14:10',
+          product: 'Американо + вода б/г',
+          qty: 2,
+          unit: 'шт',
+          reason: 'Выдача начальству',
+          comment: 'Управляющий'
+        }
+      ];
+
+      let entries = loadFromStorage(STORAGE_KEY, sampleEntries);
+      let presets = loadFromStorage(PRESETS_KEY, defaultPresets);
+      let webhookUrl = loadFromStorage(WEBHOOK_KEY, '');
+
+      let selectedUnit = 'мл';
+      let selectedReason = 'Порча продукта';
+
+      function getTodayISO() {
+        const d = new Date();
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+      }
+
+      function getNowTime() {
+        const d = new Date();
+        return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      }
+
+      function loadFromStorage(key, fallback) {
+        try {
+          const raw = localStorage.getItem(key);
+          return raw ? JSON.parse(raw) : fallback;
+        } catch (e) {
+          return fallback;
+        }
+      }
+
+      function saveToStorage(key, val) {
+        try {
+          localStorage.setItem(key, JSON.stringify(val));
+        } catch (e) {
+          // ignore sandbox storage error
+        }
+      }
+
+      function showToast(message, isSuccess = true) {
+        const toast = document.getElementById('toast');
+        const inner = document.getElementById('toast-inner');
+        const msgEl = document.getElementById('toast-msg');
+        const iconEl = document.getElementById('toast-icon');
+
+        msgEl.textContent = message;
+        iconEl.textContent = isSuccess ? '✓' : 'ℹ️';
+        inner.className = isSuccess
+          ? 'bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-between border border-emerald-400/30'
+          : 'bg-amber-600 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-between border border-amber-400/30';
+
+        toast.classList.remove('-translate-y-24', 'opacity-0');
+        toast.classList.add('translate-y-0', 'opacity-100');
+
+        if (window._toastTimer) clearTimeout(window._toastTimer);
+        window._toastTimer = setTimeout(() => {
+          toast.classList.remove('translate-y-0', 'opacity-100');
+          toast.classList.add('-translate-y-24', 'opacity-0');
+        }, 2600);
+      }
+
+      function copyTextToClipboard(text, successMsg) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(() => {
+            showToast(successMsg);
+          }).catch(() => fallbackCopy(text, successMsg));
+        } else {
+          fallbackCopy(text, successMsg);
+        }
+      }
+
+      function fallbackCopy(text, successMsg) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          showToast(successMsg);
+        } catch (err) {
+          showToast('Не удалось скопировать', false);
+        }
+        document.body.removeChild(ta);
+      }
+
+      // Tabs logic
+      const tabAdd = document.getElementById('tab-btn-add');
+      const tabHistory = document.getElementById('tab-btn-history');
+      const tabSync = document.getElementById('tab-btn-sync');
+
+      const viewAdd = document.getElementById('view-add');
+      const viewHistory = document.getElementById('view-history');
+      const viewSync = document.getElementById('view-sync');
+
+      function switchTab(tab) {
+        viewAdd.classList.add('hidden');
+        viewHistory.classList.add('hidden');
+        viewSync.classList.add('hidden');
+
+        [tabAdd, tabHistory, tabSync].forEach(btn => {
+          btn.className = 'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-300 hover:text-white flex items-center gap-1.5';
+        });
+
+        if (tab === 'add') {
+          viewAdd.classList.remove('hidden');
+          tabAdd.className = 'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-amber-500 text-slate-950 shadow-sm';
+        } else if (tab === 'history') {
+          viewHistory.classList.remove('hidden');
+          tabHistory.className = 'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-amber-500 text-slate-950 shadow-sm flex items-center gap-1.5';
+          renderHistory();
+        } else if (tab === 'sync') {
+          viewSync.classList.remove('hidden');
+          tabSync.className = 'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-amber-500 text-slate-950 shadow-sm';
+        }
+      }
+
+      tabAdd.addEventListener('click', () => switchTab('add'));
+      tabHistory.addEventListener('click', () => switchTab('history'));
+      tabSync.addEventListener('click', () => switchTab('sync'));
+      document.getElementById('btn-goto-history').addEventListener('click', () => switchTab('history'));
+
+      // Render Preset Chips
+      function renderPresets() {
+        const container = document.getElementById('preset-chips');
+        container.innerHTML = '';
+        presets.forEach((p, idx) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'text-xs bg-slate-800 hover:bg-slate-700 active:bg-amber-500 active:text-slate-950 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5';
+          btn.innerHTML = `<span>${escapeHtml(p.name)}</span><span class="text-[10px] text-slate-400">(${escapeHtml(p.unit)})</span>`;
+          btn.addEventListener('click', () => {
+            document.getElementById('input-product').value = p.name;
+            setUnit(p.unit === 'порц' ? 'шт' : p.unit);
+            document.getElementById('input-qty').focus();
+          });
+          container.appendChild(btn);
+        });
+      }
+
+      // Toggle Custom Preset Box
+      document.getElementById('btn-toggle-preset-add').addEventListener('click', () => {
+        const box = document.getElementById('custom-preset-box');
+        box.classList.toggle('hidden');
+      });
+
+      document.getElementById('btn-save-preset').addEventListener('click', () => {
+        const nameInput = document.getElementById('new-preset-name');
+        const unitInput = document.getElementById('new-preset-unit');
+        const name = nameInput.value.trim();
+        if (!name) return;
+        presets.push({ name, unit: unitInput.value });
+        saveToStorage(PRESETS_KEY, presets);
+        nameInput.value = '';
+        document.getElementById('custom-preset-box').classList.add('hidden');
+        renderPresets();
+        showToast(`Кнопка «${name}» добавлена`);
+      });
+
+      // Unit Selection
+      function setUnit(unit) {
+        selectedUnit = unit;
+        document.querySelectorAll('.unit-btn').forEach(btn => {
+          if (btn.dataset.unit === unit) {
+            btn.className = 'unit-btn rounded-lg text-xs font-semibold py-2 transition-all bg-amber-500 text-slate-950';
+          } else {
+            btn.className = 'unit-btn rounded-lg text-xs font-semibold py-2 transition-all text-slate-300 hover:text-white';
+          }
+        });
+      }
+
+      document.querySelectorAll('.unit-btn').forEach(btn => {
+        btn.addEventListener('click', () => setUnit(btn.dataset.unit));
+      });
+
+      // Quick Qty Buttons
+      document.querySelectorAll('.quick-qty-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const input = document.getElementById('input-qty');
+          const current = parseFloat(input.value) || 0;
+          const add = parseFloat(btn.dataset.addqty) || 0;
+          input.value = current + add;
+        });
+      });
+
+      document.getElementById('btn-clear-qty').addEventListener('click', () => {
+        document.getElementById('input-qty').value = '';
+      });
+
+      // Reason Selection
+      const reasonStyleMap = {
+        'Порча продукта': 'bg-rose-500/20 border-rose-500 text-white',
+        'Комплимент гостю': 'bg-amber-500/20 border-amber-500 text-white',
+        'Проработка': 'bg-purple-500/20 border-purple-500 text-white',
+        'Выдача начальству': 'bg-sky-500/20 border-sky-500 text-white',
+        'Бой / Разлив': 'bg-orange-500/20 border-orange-500 text-white',
+        'Другое': 'bg-emerald-500/20 border-emerald-500 text-white'
+      };
+
+      function setReason(reason) {
+        selectedReason = reason;
+        document.querySelectorAll('.reason-btn').forEach(btn => {
+          if (btn.dataset.reason === reason) {
+            const activeClasses = reasonStyleMap[reason] || 'bg-amber-500/20 border-amber-500 text-white';
+            btn.className = `reason-btn flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs sm:text-sm font-medium transition-all ${activeClasses}`;
+          } else {
+            btn.className = 'reason-btn flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs sm:text-sm font-medium transition-all bg-slate-800/80 border-slate-700 text-slate-300 hover:border-slate-600';
+          }
+        });
+      }
+
+      document.querySelectorAll('.reason-btn').forEach(btn => {
+        btn.addEventListener('click', () => setReason(btn.dataset.reason));
+      });
+
+      // Reason Badge Helper
+      function getReasonBadge(reason) {
+        const badges = {
+          'Порча продукта': 'bg-rose-500/15 text-rose-300 border-rose-500/30',
+          'Комплимент гостю': 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+          'Проработка': 'bg-purple-500/15 text-purple-300 border-purple-500/30',
+          'Выдача начальству': 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+          'Бой / Разлив': 'bg-orange-500/15 text-orange-300 border-orange-500/30',
+          'Другое': 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+        };
+        const cls = badges[reason] || badges['Другое'];
+        return `<span class="px-2 py-0.5 text-[11px] rounded-md border font-medium ${cls}">${escapeHtml(reason)}</span>`;
+      }
+
+      function escapeHtml(str) {
+        return String(str || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      // Form Submit
+      document.getElementById('writeoff-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const dateVal = document.getElementById('input-date').value || getTodayISO();
+        const productVal = document.getElementById('input-product').value.trim();
+        const qtyVal = parseFloat(document.getElementById('input-qty').value);
+        const commentVal = document.getElementById('input-comment').value.trim();
+
+        if (!productVal || isNaN(qtyVal) || qtyVal <= 0) {
+          showToast('Заполни продукт и количество', false);
+          return;
+        }
+
+        const newEntry = {
+          id: 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+          date: dateVal,
+          time: getNowTime(),
+          product: productVal,
+          qty: qtyVal,
+          unit: selectedUnit,
+          reason: selectedReason,
+          comment: commentVal
+        };
+
+        entries.unshift(newEntry);
+        saveToStorage(STORAGE_KEY, entries);
+
+        // Reset inputs
+        document.getElementById('input-product').value = '';
+        document.getElementById('input-qty').value = '';
+        document.getElementById('input-comment').value = '';
+
+        updateBadgeAndRecent();
+        showToast(`Списано: ${newEntry.product} (${newEntry.qty} ${newEntry.unit})`);
+
+        // Optional Webhook to Google Sheets
+        if (webhookUrl) {
+          try {
+            await fetch(webhookUrl, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(newEntry)
+            });
+          } catch (err) {
+            // ignore network error in sandbox
+          }
+        }
+      });
+
+      function deleteEntry(id) {
+        entries = entries.filter(item => item.id !== id);
+        saveToStorage(STORAGE_KEY, entries);
+        updateBadgeAndRecent();
+        renderHistory();
+        showToast('Запись удалена', false);
+      }
+
+      function updateBadgeAndRecent() {
+        document.getElementById('badge-count').textContent = entries.length;
+        const recentContainer = document.getElementById('recent-list');
+        recentContainer.innerHTML = '';
+
+        const slice = entries.slice(0, 4);
+        if (slice.length === 0) {
+          recentContainer.innerHTML = `<div class="text-xs text-slate-500 py-3 text-center">Записей пока нет. Добавь первое списание выше!</div>`;
+          return;
+        }
+
+        slice.forEach(item => {
+          const row = document.createElement('div');
+          row.className = 'flex items-center justify-between bg-slate-800/60 border border-slate-800 px-3 py-2.5 rounded-xl gap-2';
+          row.innerHTML = `
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-sm font-semibold text-white truncate">${escapeHtml(item.product)}</span>
+                <span class="text-xs font-bold text-amber-400">${escapeHtml(item.qty)} ${escapeHtml(item.unit)}</span>
+                ${getReasonBadge(item.reason)}
+              </div>
+              <div class="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
+                <span>${escapeHtml(item.date)} ${escapeHtml(item.time || '')}</span>
+                ${item.comment ? `<span>• ${escapeHtml(item.comment)}</span>` : ''}
+              </div>
+            </div>
+            <button type="button" class="text-slate-500 hover:text-rose-400 p-1 text-xs" title="Удалить">✕</button>
+          `;
+          row.querySelector('button').addEventListener('click', () => deleteEntry(item.id));
+          recentContainer.appendChild(row);
+        });
+      }
+
+      // Render Full History & Filters
+      function getFilteredEntries() {
+        const q = (document.getElementById('filter-search').value || '').toLowerCase().trim();
+        const r = document.getElementById('filter-reason').value;
+        const d = document.getElementById('filter-date').value;
+
+        return entries.filter(item => {
+          const matchQ = !q || item.product.toLowerCase().includes(q) || (item.comment && item.comment.toLowerCase().includes(q));
+          const matchR = r === 'ALL' || item.reason === r;
+          const matchD = !d || item.date === d;
+          return matchQ && matchR && matchD;
+        });
+      }
+
+      function renderHistory() {
+        const filtered = getFilteredEntries();
+        const container = document.getElementById('history-container');
+        container.innerHTML = '';
+
+        // Stats breakdown
+        const counts = {
+          'Порча продукта': 0,
+          'Комплимент гостю': 0,
+          'Проработка': 0,
+          'Выдача начальству': 0
+        };
+        filtered.forEach(e => {
+          if (counts[e.reason] !== undefined) counts[e.reason]++;
+        });
+
+        const statsBar = document.getElementById('stats-bar');
+        statsBar.innerHTML = `
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-2.5">
+            <div class="text-[11px] text-slate-400">🥀 Порча</div>
+            <div class="text-base font-bold text-rose-400">${counts['Порча продукта']} поз.</div>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-2.5">
+            <div class="text-[11px] text-slate-400">🎁 Комплименты</div>
+            <div class="text-base font-bold text-amber-400">${counts['Комплимент гостю']} поз.</div>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-2.5">
+            <div class="text-[11px] text-slate-400">🧪 Проработки</div>
+            <div class="text-base font-bold text-purple-400">${counts['Проработка']} поз.</div>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-2.5">
+            <div class="text-[11px] text-slate-400">👔 Начальству</div>
+            <div class="text-base font-bold text-sky-400">${counts['Выдача начальству']} поз.</div>
+          </div>
+        `;
+
+        if (filtered.length === 0) {
+          container.innerHTML = `<div class="p-8 text-center text-sm text-slate-500">Записей по выбранным фильтрам не найдено</div>`;
+          return;
+        }
+
+        filtered.forEach(item => {
+          const el = document.createElement('div');
+          el.className = 'p-3.5 hover:bg-slate-800/40 transition-all flex items-center justify-between gap-3';
+          el.innerHTML = `
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-sm font-semibold text-white">${escapeHtml(item.product)}</span>
+                <span class="text-xs font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md">${escapeHtml(item.qty)} ${escapeHtml(item.unit)}</span>
+                ${getReasonBadge(item.reason)}
+              </div>
+              <div class="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-2">
+                <span>📅 ${escapeHtml(item.date)} ${escapeHtml(item.time || '')}</span>
+                ${item.comment ? `<span class="text-slate-300">💬 ${escapeHtml(item.comment)}</span>` : ''}
+              </div>
+            </div>
+            <button type="button" class="text-slate-500 hover:text-rose-400 px-2 py-1 text-xs rounded-lg hover:bg-slate-800">Удалить</button>
+          `;
+          el.querySelector('button').addEventListener('click', () => deleteEntry(item.id));
+          container.appendChild(el);
+        });
+      }
+
+      ['filter-search', 'filter-reason', 'filter-date'].forEach(id => {
+        document.getElementById(id).addEventListener('input', renderHistory);
+      });
+
+      document.getElementById('btn-reset-filters').addEventListener('click', () => {
+        document.getElementById('filter-search').value = '';
+        document.getElementById('filter-reason').value = 'ALL';
+        document.getElementById('filter-date').value = '';
+        renderHistory();
+      });
+
+      // Clear All Confirmation
+      document.getElementById('btn-clear-all').addEventListener('click', () => {
+        document.getElementById('confirm-clear-box').classList.remove('hidden');
+      });
+      document.getElementById('btn-confirm-clear-no').addEventListener('click', () => {
+        document.getElementById('confirm-clear-box').classList.add('hidden');
+      });
+      document.getElementById('btn-confirm-clear-yes').addEventListener('click', () => {
+        entries = [];
+        saveToStorage(STORAGE_KEY, entries);
+        document.getElementById('confirm-clear-box').classList.add('hidden');
+        updateBadgeAndRecent();
+        renderHistory();
+        showToast('Журнал полностью очищен');
+      });
+
+      // Export 1: Telegram Text Summary
+      document.getElementById('btn-copy-tg').addEventListener('click', () => {
+        const list = getFilteredEntries();
+        if (list.length === 0) {
+          showToast('Нет записей для отчета', false);
+          return;
+        }
+        const dateHeader = document.getElementById('filter-date').value || getTodayISO();
+        let lines = [`🍸 СПИСАНИЯ ПО БАРУ (${dateHeader}):`, ''];
+        list.forEach((item, i) => {
+          const note = item.comment ? ` (${item.comment})` : '';
+          lines.push(`${i + 1}. ${item.product} — ${item.qty} ${item.unit} | ${item.reason}${note}`);
+        });
+        copyTextToClipboard(lines.join('\n'), 'Отчет для Telegram скопирован в буфер!');
+      });
+
+      // Export 2: TSV for Google Sheets Paste
+      document.getElementById('btn-copy-sheets').addEventListener('click', () => {
+        const list = getFilteredEntries();
+        if (list.length === 0) {
+          showToast('Нет записей для копирования', false);
+          return;
+        }
+        let rows = [['Дата', 'Время', 'Продукт', 'Количество', 'Ед. изм.', 'Причина', 'Комментарий'].join('\t')];
+        list.forEach(item => {
+          rows.push([
+            item.date,
+            item.time || '',
+            item.product,
+            String(item.qty).replace('.', ','),
+            item.unit,
+            item.reason,
+            item.comment || ''
+          ].join('\t'));
+        });
+        copyTextToClipboard(rows.join('\n'), 'Скопировано! Просто нажми Ctrl+V в Google Таблице');
+      });
+
+      // Export 3: CSV Download
+      document.getElementById('btn-download-csv').addEventListener('click', () => {
+        const list = getFilteredEntries();
+        if (list.length === 0) {
+          showToast('Нет записей для скачивания', false);
+          return;
+        }
+        const headers = ['Дата', 'Время', 'Продукт', 'Количество', 'Ед. изм.', 'Причина', 'Комментарий'];
+        const csvRows = [headers.join(';')];
+        list.forEach(item => {
+          const row = [
+            item.date,
+            item.time || '',
+            `"${(item.product || '').replace(/"/g, '""')}"`,
+            String(item.qty).replace('.', ','),
+            item.unit,
+            `"${(item.reason || '').replace(/"/g, '""')}"`,
+            `"${(item.comment || '').replace(/"/g, '""')}"`
+          ];
+          csvRows.push(row.join(';'));
+        });
+        const csvString = '\uFEFF' + csvRows.join('\r\n');
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `bar_writeoffs_${getTodayISO()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Файл CSV скачан');
+      });
+
+      // Webhook Save & Copy Scripts
+      const webhookInput = document.getElementById('webhook-url-input');
+      const webhookStatus = document.getElementById('webhook-status');
+      webhookInput.value = webhookUrl;
+      webhookStatus.textContent = webhookUrl
+        ? '✅ Авто-отправка в Google Таблицу включена'
+        : 'Пока не подключено — записи сохраняются локально в телефоне/браузере.';
+
+      document.getElementById('btn-save-webhook').addEventListener('click', () => {
+        webhookUrl = webhookInput.value.trim();
+        saveToStorage(WEBHOOK_KEY, webhookUrl);
+        webhookStatus.textContent = webhookUrl
+          ? '✅ Авто-отправка в Google Таблицу включена'
+          : 'Пока не подключено — записи сохраняются локально в телефоне/браузере.';
+        showToast('Настройки таблицы сохранены');
+      });
+
+      document.getElementById('btn-copy-gas').addEventListener('click', () => {
+        copyTextToClipboard(document.getElementById('gas-code').textContent, 'Код для Google Таблицы скопирован!');
+      });
+
+      document.getElementById('btn-copy-bot').addEventListener('click', () => {
+        copyTextToClipboard(document.getElementById('bot-code').textContent, 'Код Telegram-бота скопирован!');
+      });
+
+      // Init Page
+      document.getElementById('input-date').value = getTodayISO();
+      document.getElementById('current-date-label').textContent = `Смена • ${getTodayISO()}`;
+      renderPresets();
+      updateBadgeAndRecent();
+    })();
+  </script>
+</body>
+</html>
