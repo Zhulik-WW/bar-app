@@ -62,31 +62,35 @@
   </div>
 
   <!-- Header -->
-  <header class="sticky top-0 z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3">
-    <div class="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-2.5">
+  <header class="sticky top-0 z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-3 sm:px-4 py-3">
+    <div class="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-2.5">
+      <div class="flex items-center gap-2">
         <div class="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-lg">
           🍸
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h1 class="text-base sm:text-lg font-bold tracking-tight text-white leading-tight">Списания на баре</h1>
+            <h1 class="text-sm sm:text-lg font-bold tracking-tight text-white leading-tight">Списания на баре</h1>
             <span id="sync-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-medium">Локально</span>
           </div>
-          <p id="current-date-label" class="text-xs text-slate-400"></p>
+          <p id="current-date-label" class="text-[11px] sm:text-xs text-slate-400"></p>
         </div>
       </div>
 
       <!-- Navigation Tabs -->
-      <div class="flex bg-slate-800/80 p-1 rounded-xl border border-slate-700/60">
-        <button id="tab-btn-add" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-amber-500 text-slate-950 shadow-sm">
+      <div class="flex bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 overflow-x-auto max-w-full">
+        <button id="tab-btn-add" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-amber-500 text-slate-950 shadow-sm whitespace-nowrap">
           + Записать
         </button>
-        <button id="tab-btn-history" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-300 hover:text-white flex items-center gap-1.5">
+        <button id="tab-btn-expiry" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-300 hover:text-white flex items-center gap-1 whitespace-nowrap">
+          <span>⏳ Сроки</span>
+          <span id="badge-expiry" class="px-1.5 py-0.5 text-[10px] rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 font-semibold">0</span>
+        </button>
+        <button id="tab-btn-history" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-300 hover:text-white flex items-center gap-1 whitespace-nowrap">
           <span>Журнал</span>
           <span id="badge-count" class="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-700 text-slate-200 font-semibold">0</span>
         </button>
-        <button id="tab-btn-sync" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-300 hover:text-white">
+        <button id="tab-btn-sync" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-300 hover:text-white whitespace-nowrap">
           TG / Таблица
         </button>
       </div>
@@ -230,6 +234,116 @@
 
     </section>
 
+    <!-- VIEW 4: EXPIRY TRACKER ("СРОКИ ГОДНОСТИ / ПОРЧА") -->
+    <section id="view-expiry" class="hidden space-y-5">
+
+      <!-- Traffic Light Legend & Summary -->
+      <div class="grid grid-cols-3 gap-2.5">
+        <button type="button" data-expfilter="RED" class="exp-filter-card bg-rose-950/40 border border-rose-500/40 hover:border-rose-400 rounded-2xl p-3 text-left transition-all">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-rose-300">🔴 Срочно / Истёк</span>
+            <span id="exp-count-red" class="text-base font-bold text-rose-400">0</span>
+          </div>
+          <p class="text-[11px] text-rose-200/70 mt-0.5">Просрочено или ≤ 2 дн.</p>
+        </button>
+
+        <button type="button" data-expfilter="YELLOW" class="exp-filter-card bg-amber-950/40 border border-amber-500/40 hover:border-amber-400 rounded-2xl p-3 text-left transition-all">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-amber-300">🟡 Подходит</span>
+            <span id="exp-count-yellow" class="text-base font-bold text-amber-400">0</span>
+          </div>
+          <p class="text-[11px] text-amber-200/70 mt-0.5">Осталось 3–4 дня</p>
+        </button>
+
+        <button type="button" data-expfilter="GREEN" class="exp-filter-card bg-emerald-950/40 border border-emerald-500/40 hover:border-emerald-400 rounded-2xl p-3 text-left transition-all">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-emerald-300">🟢 Свежее</span>
+            <span id="exp-count-green" class="text-base font-bold text-emerald-400">0</span>
+          </div>
+          <p class="text-[11px] text-emerald-200/70 mt-0.5">В запасе ≥ 5 дней</p>
+        </button>
+      </div>
+
+      <!-- Fast Prep Presets -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-2.5">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Быстрые заготовки и открытия</span>
+          <span class="text-[11px] text-slate-400">Нажми, чтобы подставить срок</span>
+        </div>
+        <div id="expiry-preset-chips" class="flex flex-wrap gap-1.5">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Add Prep / Opened Item Form -->
+      <form id="expiry-form" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm sm:text-base font-bold text-white">Добавить маркировку / открытие</h2>
+          <span id="exp-preview-label" class="text-xs text-amber-400 font-medium"></span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
+            <label for="exp-product" class="block text-xs font-medium text-slate-400 mb-1">Заготовка / Открытый продукт</label>
+            <input id="exp-product" type="text" required placeholder="Напр. Кордиал лайм, Пюре манго, Молоко..." class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
+          </div>
+          <div>
+            <label for="exp-volume" class="block text-xs font-medium text-slate-400 mb-1">Объем / Тары (необяз.)</label>
+            <input id="exp-volume" type="text" placeholder="Напр. 1 бут / 500 мл" class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label for="exp-made-date" class="block text-xs font-medium text-slate-400 mb-1">Дата изготовления / откр.</label>
+            <input id="exp-made-date" type="date" required class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
+          </div>
+          <div>
+            <label for="exp-days" class="block text-xs font-medium text-slate-400 mb-1">Срок хранения (дней)</label>
+            <input id="exp-days" type="number" min="1" max="365" value="3" class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-amber-400 focus:outline-none focus:border-amber-500">
+          </div>
+          <div>
+            <label for="exp-until-date" class="block text-xs font-medium text-slate-400 mb-1">Годен до (включительно)</label>
+            <input id="exp-until-date" type="date" required class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+
+        <!-- Quick Shelf Life Days -->
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="text-xs text-slate-400 mr-1">Быстрый срок:</span>
+          <button type="button" data-expdays="1" class="exp-days-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-lg">1 день (24ч)</button>
+          <button type="button" data-expdays="2" class="exp-days-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-lg">2 дня (48ч)</button>
+          <button type="button" data-expdays="3" class="exp-days-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-lg">3 дня (72ч)</button>
+          <button type="button" data-expdays="5" class="exp-days-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-lg">5 дней</button>
+          <button type="button" data-expdays="7" class="exp-days-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-lg">7 дней</button>
+          <button type="button" data-expdays="14" class="exp-days-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-lg">14 дней</button>
+          <button type="button" data-expdays="30" class="exp-days-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-lg">30 дней</button>
+        </div>
+
+        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-slate-950 font-bold py-3 px-4 rounded-xl shadow-lg shadow-amber-500/10 transition-all text-sm sm:text-base">
+          Поставить на контроль срока
+        </button>
+      </form>
+
+      <!-- Active Expiry List -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
+        <div class="p-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-white">Активные сроки и заготовки на баре</h3>
+            <p class="text-xs text-slate-400">Отсортировано от самых срочных к свежим</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" id="btn-exp-show-all" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1.5 rounded-lg">Показать все</button>
+            <button type="button" id="btn-copy-exp-tg" class="text-xs bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 px-2.5 py-1.5 rounded-lg font-medium">📋 Сводка в TG</button>
+          </div>
+        </div>
+        <div id="expiry-list-container" class="divide-y divide-slate-800">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    </section>
+
     <!-- VIEW 2: HISTORY & EXPORT -->
     <section id="view-history" class="hidden space-y-4">
       
@@ -312,14 +426,8 @@
           <h2 class="text-base font-bold text-white">Общий журнал для всех сменщиков (2-сторонняя синхронизация)</h2>
         </div>
         <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-          Чтобы и ты, и твои сменщики со своих телефонов видели <strong>один общий журнал внутри приложения</strong>, подключи общую Google Таблицу в качестве бесплатной облачной базы:
+          Твоя ссылка на Google Таблицу уже вшита в код по умолчанию! Если захочешь, чтобы и вкладка <strong>«⏳ Сроки»</strong> тоже хранилась на отдельном листе в той же Google Таблице у всех сменщиков, можешь при случае обновить скрипт в таблице на версию ниже:
         </p>
-        <ol class="text-xs text-slate-300 space-y-1.5 list-decimal list-inside bg-slate-800/60 p-3 rounded-xl border border-slate-700/60">
-          <li>Создай новую Google Таблицу на Google Диске и открой <strong>Расширения → Apps Script</strong>.</li>
-          <li>Удали всё, что там написано, и вставь <strong>новый двухсторонний код</strong> ниже (он умеет и сохранять записи от всех барменов, и отдавать общий список обратно в приложение).</li>
-          <li>Нажми <strong>Начать развертывание → Новое развертывание → Веб-приложение</strong> (У кого есть доступ: <strong>Все / Anyone</strong>).</li>
-          <li>Скопируй полученную ссылку `https://script.google.com/macros/s/.../exec` и вставь в поле ниже (или она уже вшита в `DEFAULT_CLOUD_URL`).</li>
-        </ol>
 
         <div class="space-y-2 pt-1">
           <label for="webhook-url-input" class="block text-xs font-medium text-slate-400">Ссылка на общую базу (Google Apps Script URL)</label>
@@ -330,14 +438,15 @@
           <p id="webhook-status" class="text-[11px] text-slate-400"></p>
         </div>
 
-        <!-- Google Apps Script Code (Two-Way) -->
+        <!-- Google Apps Script Code (Two-Way + Expiry Sheet) -->
         <div class="pt-2">
           <div class="flex items-center justify-between mb-1.5">
-            <span class="text-xs font-semibold text-slate-400">Двухсторонний код для Google Таблицы (Apps Script):</span>
+            <span class="text-xs font-semibold text-slate-400">Двухсторонний код для Google Таблицы (Списания + Сроки):</span>
             <button id="btn-copy-gas" class="text-xs text-amber-400 hover:text-amber-300 font-medium">Скопировать код</button>
           </div>
           <pre id="gas-code" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] text-emerald-300 overflow-x-auto custom-scrollbar">function doGet(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheets()[0];
   var rows = sheet.getDataRange().getDisplayValues();
   var result = [];
   for (var i = 1; i &lt; rows.length; i++) {
@@ -356,16 +465,55 @@
     });
   }
   result.reverse();
-  return ContentService.createTextOutput(JSON.stringify({ status: "ok", entries: result }))
+
+  var expSheet = ss.getSheetByName("Сроки");
+  var expiries = [];
+  if (expSheet) {
+    var erows = expSheet.getDataRange().getDisplayValues();
+    for (var j = 1; j &lt; erows.length; j++) {
+      var er = erows[j];
+      if (!er[0] &amp;&amp; !er[1]) continue;
+      expiries.push({
+        id: String(er[0]),
+        product: String(er[1]),
+        madeDate: String(er[2]),
+        expiryDate: String(er[3]),
+        volume: String(er[4] || ""),
+        bartender: String(er[5] || "")
+      });
+    }
+  }
+  return ContentService.createTextOutput(JSON.stringify({ status: "ok", entries: result, expiries: expiries }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
 function doPost(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var data = JSON.parse(e.postData.contents);
+
+  if (data.type === "expiry") {
+    var expSheet = ss.getSheetByName("Сроки") || ss.insertSheet("Сроки");
+    if (expSheet.getLastRow() === 0) {
+      expSheet.appendRow(["ID", "Заготовка", "Дата открытия", "Годен до", "Объем", "Бармен"]);
+    }
+    if (data.action === "delete" &amp;&amp; data.id) {
+      var erows = expSheet.getDataRange().getDisplayValues();
+      for (var k = erows.length - 1; k &gt;= 1; k--) {
+        if (String(erows[k][0]) === String(data.id)) {
+          expSheet.deleteRow(k + 1);
+          break;
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({ status: "deleted_expiry" })).setMimeType(ContentService.MimeType.JSON);
+    }
+    expSheet.appendRow([data.id, data.product, "'" + data.madeDate, "'" + data.expiryDate, data.volume || "", data.bartender || ""]);
+    return ContentService.createTextOutput(JSON.stringify({ status: "added_expiry" })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  var sheet = ss.getSheets()[0];
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(["ID", "Дата", "Время", "Продукт", "Кол-во", "Ед.", "Причина", "Бармен", "Комментарий"]);
   }
-  var data = JSON.parse(e.postData.contents);
   if (data.action === "delete" &amp;&amp; data.id) {
     var rows = sheet.getDataRange().getDisplayValues();
     for (var i = rows.length - 1; i &gt;= 1; i--) {
@@ -374,8 +522,7 @@ function doPost(e) {
         break;
       }
     }
-    return ContentService.createTextOutput(JSON.stringify({ status: "deleted" }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({ status: "deleted" })).setMimeType(ContentService.MimeType.JSON);
   }
   sheet.appendRow([
     data.id,
@@ -388,8 +535,7 @@ function doPost(e) {
     data.bartender || "",
     data.comment || ""
   ]);
-  return ContentService.createTextOutput(JSON.stringify({ status: "added" }))
-    .setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify({ status: "added" })).setMimeType(ContentService.MimeType.JSON);
 }</pre>
         </div>
       </div>
@@ -474,6 +620,7 @@ if __name__ == "__main__":
 
       const STORAGE_KEY = 'bar_writeoffs_v1';
       const PRESETS_KEY = 'bar_presets_v1';
+      const EXPIRY_KEY = 'bar_expiries_v1';
       const WEBHOOK_KEY = 'bar_webhook_v1';
       const BARTENDER_KEY = 'bar_bartender_name_v1';
 
@@ -492,60 +639,16 @@ if __name__ == "__main__":
         { name: 'Эспрессо (настройка помола)', unit: 'порц' }
       ];
 
-      const sampleEntries = [
-        {
-          id: 'sample-1',
-          date: getTodayISO(),
-          time: '12:15',
-          product: 'Мята свежая',
-          qty: 85,
-          unit: 'г',
-          reason: 'Порча продукта',
-          bartender: 'Алекс',
-          comment: 'Почернела после поставки'
-        },
-        {
-          id: 'sample-2',
-          date: getTodayISO(),
-          time: '13:05',
-          product: 'Апероль Шприц',
-          qty: 1,
-          unit: 'шт',
-          reason: 'Комплимент гостю',
-          bartender: 'Макс',
-          comment: 'Постоянный гость за баром'
-        },
-        {
-          id: 'sample-3',
-          date: getTodayISO(),
-          time: '13:40',
-          product: 'Пюре маракуйя',
-          qty: 120,
-          unit: 'г',
-          reason: 'Проработка',
-          bartender: 'Алекс',
-          comment: 'Тест сезонного сауэра'
-        },
-        {
-          id: 'sample-4',
-          date: getTodayISO(),
-          time: '14:10',
-          product: 'Американо + вода б/г',
-          qty: 2,
-          unit: 'шт',
-          reason: 'Выдача начальству',
-          bartender: 'Макс',
-          comment: 'Управляющий'
-        }
+      const expiryPresets = [
+        { name: 'Фреш лимонный / лаймовый', days: 1, volume: '500 мл' },
+        { name: 'Молоко открытое', days: 3, volume: '1 л' },
+        { name: 'Альтернативное молоко (откр.)', days: 4, volume: '1 л' },
+        { name: 'Сливки открытые', days: 3, volume: '500 мл' },
+        { name: 'Пюре фруктовое (откр.)', days: 5, volume: '1 бут' },
+        { name: 'Кордиал домашний', days: 7, volume: '700 мл' },
+        { name: 'Сироп сахарный / домашний', days: 14, volume: '1 л' },
+        { name: 'Вермут открытый', days: 30, volume: '750 мл' }
       ];
-
-      let entries = loadFromStorage(STORAGE_KEY, sampleEntries);
-      let presets = loadFromStorage(PRESETS_KEY, defaultPresets);
-      let webhookUrl = loadFromStorage(WEBHOOK_KEY, '') || DEFAULT_CLOUD_URL;
-      let savedBartender = loadFromStorage(BARTENDER_KEY, '');
-
-      let selectedUnit = 'мл';
-      let selectedReason = 'Порча продукта';
 
       // Текущая дата по Киеву (ГГГГ-ММ-ДД)
       function getTodayISO() {
@@ -560,6 +663,29 @@ if __name__ == "__main__":
           const d = new Date();
           return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         }
+      }
+
+      // Прибавить N дней к дате YYYY-MM-DD
+      function addDaysISO(dateISO, days) {
+        const parts = String(dateISO || getTodayISO()).split('-');
+        const dt = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        dt.setDate(dt.getDate() + Number(days || 0));
+        const yyyy = dt.getFullYear();
+        const mm = String(dt.getMonth() + 1).padStart(2, '0');
+        const dd = String(dt.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+      }
+
+      // Разница в днях между expiryDate и сегодняшней датой по Киеву
+      function getDaysRemaining(expiryISO) {
+        const cleanExp = formatShortDate(expiryISO);
+        const cleanToday = getTodayISO();
+        const p1 = cleanToday.split('-');
+        const p2 = cleanExp.split('-');
+        if (p1.length !== 3 || p2.length !== 3) return 0;
+        const d1 = Date.UTC(Number(p1[0]), Number(p1[1]) - 1, Number(p1[2]));
+        const d2 = Date.UTC(Number(p2[0]), Number(p2[1]) - 1, Number(p2[2]));
+        return Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
       }
 
       // Текущее время по Киеву (ЧЧ:ММ, например 10:30)
@@ -616,6 +742,97 @@ if __name__ == "__main__":
         });
       }
 
+      function normalizeExpiry(item) {
+        return Object.assign({}, item, {
+          madeDate: formatShortDate(item.madeDate),
+          expiryDate: formatShortDate(item.expiryDate)
+        });
+      }
+
+      const sampleEntries = [
+        {
+          id: 'sample-1',
+          date: getTodayISO(),
+          time: '12:15',
+          product: 'Мята свежая',
+          qty: 85,
+          unit: 'г',
+          reason: 'Порча продукта',
+          bartender: 'Антон',
+          comment: 'Почернела после поставки'
+        },
+        {
+          id: 'sample-2',
+          date: getTodayISO(),
+          time: '13:05',
+          product: 'Апероль Шприц',
+          qty: 1,
+          unit: 'шт',
+          reason: 'Комплимент гостю',
+          bartender: 'Антон',
+          comment: 'Постоянный гость за баром'
+        },
+        {
+          id: 'sample-3',
+          date: getTodayISO(),
+          time: '13:40',
+          product: 'Пюре маракуйя',
+          qty: 120,
+          unit: 'г',
+          reason: 'Проработка',
+          bartender: 'Антон',
+          comment: 'Тест сезонного сауэра'
+        },
+        {
+          id: 'sample-4',
+          date: getTodayISO(),
+          time: '14:10',
+          product: 'Американо + вода б/г',
+          qty: 2,
+          unit: 'шт',
+          reason: 'Выдача начальству',
+          bartender: 'Антон',
+          comment: 'Управляющий'
+        }
+      ];
+
+      const sampleExpiries = [
+        {
+          id: 'exp-1',
+          product: 'Пюре маракуйя (откр.)',
+          madeDate: addDaysISO(getTodayISO(), -4),
+          expiryDate: addDaysISO(getTodayISO(), 1),
+          volume: '1 бут',
+          bartender: 'Антон'
+        },
+        {
+          id: 'exp-2',
+          product: 'Альтернативное молоко (кокос)',
+          madeDate: addDaysISO(getTodayISO(), -1),
+          expiryDate: addDaysISO(getTodayISO(), 3),
+          volume: '1 л',
+          bartender: 'Антон'
+        },
+        {
+          id: 'exp-3',
+          product: 'Кордиал Лайм-Лемонграсс',
+          madeDate: getTodayISO(),
+          expiryDate: addDaysISO(getTodayISO(), 7),
+          volume: '700 мл',
+          bartender: 'Антон'
+        }
+      ];
+
+      let entries = loadFromStorage(STORAGE_KEY, sampleEntries);
+      let presets = loadFromStorage(PRESETS_KEY, defaultPresets);
+      let expiries = loadFromStorage(EXPIRY_KEY, sampleExpiries);
+      let webhookUrl = loadFromStorage(WEBHOOK_KEY, '') || DEFAULT_CLOUD_URL;
+      let savedBartender = loadFromStorage(BARTENDER_KEY, '');
+
+      let selectedUnit = 'мл';
+      let selectedReason = 'Порча продукта';
+      let activeExpiryFilter = 'ALL'; // ALL | RED | YELLOW | GREEN
+
       function loadFromStorage(key, fallback) {
         try {
           const raw = localStorage.getItem(key);
@@ -663,7 +880,7 @@ if __name__ == "__main__":
           : 'text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-medium';
       }
 
-      // Fetch shared entries from Google Sheets (GET)
+      // Fetch shared entries & expiries from Google Sheets (GET)
       async function syncFromCloud(showNotification = false) {
         if (!webhookUrl) {
           updateSyncBadge('Локально', false);
@@ -676,11 +893,16 @@ if __name__ == "__main__":
           if (data && Array.isArray(data.entries)) {
             entries = data.entries.map(normalizeEntry);
             saveToStorage(STORAGE_KEY, entries);
-            updateBadgeAndRecent();
-            renderHistory();
-            updateSyncBadge('Общий журнал ✓', true);
-            if (showNotification) showToast('Общий журнал обновлен!');
           }
+          if (data && Array.isArray(data.expiries)) {
+            expiries = data.expiries.map(normalizeExpiry);
+            saveToStorage(EXPIRY_KEY, expiries);
+          }
+          updateBadgeAndRecent();
+          renderHistory();
+          renderExpiries();
+          updateSyncBadge('Общий журнал ✓', true);
+          if (showNotification) showToast('Общий журнал обновлен!');
         } catch (err) {
           updateSyncBadge('Облако подключено', true);
           if (showNotification) showToast('Не удалось загрузить список (проверь доступ Все / Anyone)', false);
@@ -715,37 +937,45 @@ if __name__ == "__main__":
 
       // Tabs logic
       const tabAdd = document.getElementById('tab-btn-add');
+      const tabExpiry = document.getElementById('tab-btn-expiry');
       const tabHistory = document.getElementById('tab-btn-history');
       const tabSync = document.getElementById('tab-btn-sync');
 
       const viewAdd = document.getElementById('view-add');
+      const viewExpiry = document.getElementById('view-expiry');
       const viewHistory = document.getElementById('view-history');
       const viewSync = document.getElementById('view-sync');
 
       function switchTab(tab) {
         viewAdd.classList.add('hidden');
+        viewExpiry.classList.add('hidden');
         viewHistory.classList.add('hidden');
         viewSync.classList.add('hidden');
 
-        [tabAdd, tabHistory, tabSync].forEach(btn => {
-          btn.className = 'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-300 hover:text-white flex items-center gap-1.5';
+        [tabAdd, tabExpiry, tabHistory, tabSync].forEach(btn => {
+          btn.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-300 hover:text-white flex items-center gap-1 whitespace-nowrap';
         });
 
         if (tab === 'add') {
           viewAdd.classList.remove('hidden');
-          tabAdd.className = 'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-amber-500 text-slate-950 shadow-sm';
+          tabAdd.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-amber-500 text-slate-950 shadow-sm whitespace-nowrap';
+        } else if (tab === 'expiry') {
+          viewExpiry.classList.remove('hidden');
+          tabExpiry.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-amber-500 text-slate-950 shadow-sm flex items-center gap-1 whitespace-nowrap';
+          renderExpiries();
         } else if (tab === 'history') {
           viewHistory.classList.remove('hidden');
-          tabHistory.className = 'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-amber-500 text-slate-950 shadow-sm flex items-center gap-1.5';
+          tabHistory.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-amber-500 text-slate-950 shadow-sm flex items-center gap-1 whitespace-nowrap';
           renderHistory();
           if (webhookUrl) syncFromCloud(false);
         } else if (tab === 'sync') {
           viewSync.classList.remove('hidden');
-          tabSync.className = 'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-amber-500 text-slate-950 shadow-sm';
+          tabSync.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-amber-500 text-slate-950 shadow-sm whitespace-nowrap';
         }
       }
 
       tabAdd.addEventListener('click', () => switchTab('add'));
+      tabExpiry.addEventListener('click', () => switchTab('expiry'));
       tabHistory.addEventListener('click', () => switchTab('history'));
       tabSync.addEventListener('click', () => switchTab('sync'));
       document.getElementById('btn-goto-history').addEventListener('click', () => switchTab('history'));
@@ -769,6 +999,285 @@ if __name__ == "__main__":
           container.appendChild(btn);
         });
       }
+
+      // Render Expiry Prep Presets
+      function renderExpiryPresets() {
+        const container = document.getElementById('expiry-preset-chips');
+        container.innerHTML = '';
+        expiryPresets.forEach(p => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'text-xs bg-slate-800 hover:bg-slate-700 active:bg-amber-500 active:text-slate-950 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5';
+          btn.innerHTML = `<span>${escapeHtml(p.name)}</span><span class="text-[10px] text-amber-400 font-semibold">${p.days} дн.</span>`;
+          btn.addEventListener('click', () => {
+            document.getElementById('exp-product').value = p.name;
+            document.getElementById('exp-volume').value = p.volume || '';
+            document.getElementById('exp-days').value = p.days;
+            recalcExpiryDateFromDays();
+          });
+          container.appendChild(btn);
+        });
+      }
+
+      // Expiry Date Calculations
+      const expMadeInput = document.getElementById('exp-made-date');
+      const expDaysInput = document.getElementById('exp-days');
+      const expUntilInput = document.getElementById('exp-until-date');
+      const expPreviewLabel = document.getElementById('exp-preview-label');
+
+      function recalcExpiryDateFromDays() {
+        const made = expMadeInput.value || getTodayISO();
+        const days = parseInt(expDaysInput.value, 10) || 1;
+        const until = addDaysISO(made, days);
+        expUntilInput.value = until;
+        updateExpPreviewLabel();
+      }
+
+      function updateExpPreviewLabel() {
+        const left = getDaysRemaining(expUntilInput.value);
+        if (left < 0) {
+          expPreviewLabel.textContent = `🔴 Уже просрочено (${Math.abs(left)} дн. назад)`;
+          expPreviewLabel.className = 'text-xs text-rose-400 font-semibold';
+        } else if (left <= 2) {
+          expPreviewLabel.textContent = `🔴 Осталось ${left} дн. (критический срок)`;
+          expPreviewLabel.className = 'text-xs text-rose-400 font-semibold';
+        } else if (left <= 4) {
+          expPreviewLabel.textContent = `🟡 Осталось ${left} дн. (скоро истекает)`;
+          expPreviewLabel.className = 'text-xs text-amber-400 font-semibold';
+        } else {
+          expPreviewLabel.textContent = `🟢 Свежее (в запасе ${left} дн.)`;
+          expPreviewLabel.className = 'text-xs text-emerald-400 font-semibold';
+        }
+      }
+
+      expMadeInput.addEventListener('change', recalcExpiryDateFromDays);
+      expDaysInput.addEventListener('input', recalcExpiryDateFromDays);
+      expUntilInput.addEventListener('change', updateExpPreviewLabel);
+
+      document.querySelectorAll('.exp-days-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          expDaysInput.value = btn.dataset.expdays;
+          recalcExpiryDateFromDays();
+        });
+      });
+
+      // Classify Expiry Status: RED (<=2 days), YELLOW (3-4 days), GREEN (>=5 days)
+      function getExpiryStatus(item) {
+        const daysLeft = getDaysRemaining(item.expiryDate);
+        if (daysLeft <= 2) {
+          let label = '';
+          if (daysLeft < 0) label = `Просрочено (${Math.abs(daysLeft)} дн.)`;
+          else if (daysLeft === 0) label = 'Истекает сегодня!';
+          else if (daysLeft === 1) label = 'Истекает завтра (1 дн.)';
+          else label = 'Послезавтра (2 дн.)';
+          return {
+            code: 'RED',
+            daysLeft,
+            label,
+            rowBg: 'bg-rose-950/25 border-l-4 border-l-rose-500',
+            badgeCls: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
+            dot: '🔴'
+          };
+        } else if (daysLeft <= 4) {
+          return {
+            code: 'YELLOW',
+            daysLeft,
+            label: `Скоро истечет (${daysLeft} дн.)`,
+            rowBg: 'bg-amber-950/20 border-l-4 border-l-amber-400',
+            badgeCls: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+            dot: '🟡'
+          };
+        } else {
+          return {
+            code: 'GREEN',
+            daysLeft,
+            label: `Свежее (${daysLeft} дн.)`,
+            rowBg: 'bg-emerald-950/10 border-l-4 border-l-emerald-500',
+            badgeCls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+            dot: '🟢'
+          };
+        }
+      }
+
+      // Render Expiry Items & Traffic Light Counters
+      function renderExpiries() {
+        const normalized = expiries.map(normalizeExpiry);
+        normalized.sort((a, b) => getDaysRemaining(a.expiryDate) - getDaysRemaining(b.expiryDate));
+
+        let redCount = 0, yellowCount = 0, greenCount = 0;
+        normalized.forEach(item => {
+          const st = getExpiryStatus(item);
+          if (st.code === 'RED') redCount++;
+          else if (st.code === 'YELLOW') yellowCount++;
+          else greenCount++;
+        });
+
+        document.getElementById('exp-count-red').textContent = redCount;
+        document.getElementById('exp-count-yellow').textContent = yellowCount;
+        document.getElementById('exp-count-green').textContent = greenCount;
+
+        const topBadge = document.getElementById('badge-expiry');
+        const urgentTotal = redCount + yellowCount;
+        topBadge.textContent = urgentTotal > 0 ? urgentTotal : normalized.length;
+        topBadge.className = redCount > 0
+          ? 'px-1.5 py-0.5 text-[10px] rounded-full bg-rose-500 text-white font-bold'
+          : (yellowCount > 0
+              ? 'px-1.5 py-0.5 text-[10px] rounded-full bg-amber-500 text-slate-950 font-bold'
+              : 'px-1.5 py-0.5 text-[10px] rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold');
+
+        const filtered = activeExpiryFilter === 'ALL'
+          ? normalized
+          : normalized.filter(item => getExpiryStatus(item).code === activeExpiryFilter);
+
+        const container = document.getElementById('expiry-list-container');
+        container.innerHTML = '';
+
+        if (filtered.length === 0) {
+          container.innerHTML = `<div class="p-8 text-center text-sm text-slate-500">Заготовок в этой категории нет</div>`;
+          return;
+        }
+
+        filtered.forEach(item => {
+          const st = getExpiryStatus(item);
+          const row = document.createElement('div');
+          row.className = `p-3.5 transition-all flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 ${st.rowBg}`;
+          row.innerHTML = `
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-sm font-bold text-white">${escapeHtml(item.product)}</span>
+                ${item.volume ? `<span class="text-xs font-semibold text-slate-300 bg-slate-800 px-2 py-0.5 rounded-md border border-slate-700">${escapeHtml(item.volume)}</span>` : ''}
+                <span class="px-2 py-0.5 text-[11px] rounded-md border font-semibold ${st.badgeCls}">${st.dot} ${escapeHtml(st.label)}</span>
+              </div>
+              <div class="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-2.5">
+                <span>Откр/варка: <strong class="text-slate-300">${escapeHtml(item.madeDate)}</strong></span>
+                <span>→ Годен до: <strong class="text-white">${escapeHtml(item.expiryDate)}</strong></span>
+                ${item.bartender ? `<span class="text-amber-300">👤 ${escapeHtml(item.bartender)}</span>` : ''}
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 w-full sm:w-auto justify-end">
+              <button type="button" class="btn-exp-writeoff text-xs bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 px-2.5 py-1.5 rounded-lg font-medium transition-all">
+                🥀 В списание
+              </button>
+              <button type="button" class="btn-exp-delete text-xs text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-800 px-2.5 py-1.5 rounded-lg transition-all" title="Убрать (использовано)">
+                ✓ Отработано
+              </button>
+            </div>
+          `;
+
+          // Move expired/spoiled prep directly into Write-off form
+          row.querySelector('.btn-exp-writeoff').addEventListener('click', () => {
+            document.getElementById('input-product').value = item.product;
+            setReason('Порча продукта');
+            document.getElementById('input-comment').value = `Истек срок годности (откр. ${item.madeDate}, до ${item.expiryDate})`;
+            switchTab('add');
+            document.getElementById('input-qty').focus();
+            showToast('Укажи остаток для списания порчи');
+          });
+
+          row.querySelector('.btn-exp-delete').addEventListener('click', () => {
+            deleteExpiryItem(item.id);
+          });
+
+          container.appendChild(row);
+        });
+      }
+
+      // Filter by clicking Red / Yellow / Green cards
+      document.querySelectorAll('.exp-filter-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const code = card.dataset.expfilter;
+          activeExpiryFilter = (activeExpiryFilter === code) ? 'ALL' : code;
+          renderExpiries();
+        });
+      });
+
+      document.getElementById('btn-exp-show-all').addEventListener('click', () => {
+        activeExpiryFilter = 'ALL';
+        renderExpiries();
+      });
+
+      // Add New Expiry Item Submit
+      document.getElementById('expiry-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const productVal = document.getElementById('exp-product').value.trim();
+        const volumeVal = document.getElementById('exp-volume').value.trim();
+        const madeVal = document.getElementById('exp-made-date').value || getTodayISO();
+        const untilVal = document.getElementById('exp-until-date').value || addDaysISO(madeVal, 3);
+        const bartenderVal = document.getElementById('input-bartender').value.trim() || savedBartender || 'Бармен';
+
+        if (!productVal) {
+          showToast('Введи название заготовки или продукта', false);
+          return;
+        }
+
+        const newExp = {
+          id: 'exp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+          product: productVal,
+          madeDate: madeVal,
+          expiryDate: untilVal,
+          volume: volumeVal,
+          bartender: bartenderVal
+        };
+
+        expiries.unshift(newExp);
+        saveToStorage(EXPIRY_KEY, expiries);
+
+        document.getElementById('exp-product').value = '';
+        document.getElementById('exp-volume').value = '';
+
+        renderExpiries();
+        showToast(`Маркировка «${newExp.product}» добавлена до ${newExp.expiryDate}`);
+
+        if (webhookUrl) {
+          try {
+            await fetch(webhookUrl, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify(Object.assign({ type: 'expiry' }, newExp))
+            });
+          } catch (err) {
+            // ignore
+          }
+        }
+      });
+
+      async function deleteExpiryItem(id) {
+        expiries = expiries.filter(item => item.id !== id);
+        saveToStorage(EXPIRY_KEY, expiries);
+        renderExpiries();
+        showToast('Позиция снята с контроля');
+
+        if (webhookUrl) {
+          try {
+            await fetch(webhookUrl, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({ type: 'expiry', action: 'delete', id: id })
+            });
+          } catch (err) {
+            // ignore
+          }
+        }
+      }
+
+      // Copy Expiry Summary for Telegram
+      document.getElementById('btn-copy-exp-tg').addEventListener('click', () => {
+        const normalized = expiries.map(normalizeExpiry);
+        if (normalized.length === 0) {
+          showToast('Список сроков пуст', false);
+          return;
+        }
+        normalized.sort((a, b) => getDaysRemaining(a.expiryDate) - getDaysRemaining(b.expiryDate));
+        let lines = [`⏳ КОНТРОЛЬ СРОКОВ НА БАРЕ (${getTodayISO()}):`, ''];
+        normalized.forEach(item => {
+          const st = getExpiryStatus(item);
+          const vol = item.volume ? ` (${item.volume})` : '';
+          lines.push(`${st.dot} ${item.product}${vol} — до ${item.expiryDate} [${st.label}]`);
+        });
+        copyTextToClipboard(lines.join('\n'), 'Сводка по срокам скопирована для Telegram!');
+      });
 
       // Toggle Custom Preset Box
       document.getElementById('btn-toggle-preset-add').addEventListener('click', () => {
@@ -881,6 +1390,7 @@ if __name__ == "__main__":
           return;
         }
 
+        savedBartender = bartenderVal;
         saveToStorage(BARTENDER_KEY, bartenderVal);
 
         const newEntry = {
@@ -1190,11 +1700,16 @@ if __name__ == "__main__":
 
       // Init Page
       entries = entries.map(normalizeEntry);
+      expiries = expiries.map(normalizeExpiry);
       document.getElementById('input-date').value = getTodayISO();
+      document.getElementById('exp-made-date').value = getTodayISO();
+      recalcExpiryDateFromDays();
       document.getElementById('current-date-label').textContent = `Смена • ${getTodayISO()} • ${getNowTime()} (Киев)`;
       document.getElementById('input-bartender').value = savedBartender;
       renderPresets();
+      renderExpiryPresets();
       updateBadgeAndRecent();
+      renderExpiries();
       if (webhookUrl) {
         syncFromCloud(false);
       }
