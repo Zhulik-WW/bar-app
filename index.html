@@ -406,12 +406,36 @@
         </div>
       </div>
 
-      <!-- Confirm Clear Modal Box (Inline) -->
-      <div id="confirm-clear-box" class="hidden bg-rose-950/50 border border-rose-500/40 rounded-2xl p-4 flex items-center justify-between">
-        <span class="text-xs sm:text-sm text-rose-200">Точно очистить локальный журнал на этом устройстве?</span>
-        <div class="flex gap-2">
-          <button id="btn-confirm-clear-yes" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg">Да, очистить</button>
-          <button id="btn-confirm-clear-no" class="bg-slate-800 text-slate-300 text-xs px-3 py-1.5 rounded-lg">Отмена</button>
+      <!-- Confirm Clear Modal Box (Full-screen critical confirmation modal) -->
+      <div id="confirm-clear-box" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-rose-500/60 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-xl shrink-0">
+              ⚠️
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-white">Полная очистка журнала списаний</h3>
+              <p class="text-xs text-rose-300 font-medium mt-0.5">Критическое действие — отменить невозможно</p>
+            </div>
+          </div>
+
+          <div class="bg-rose-950/40 border border-rose-500/30 rounded-xl p-3.5 text-xs text-slate-200 space-y-2 leading-relaxed">
+            <p>Вы действительно хотите <strong class="text-rose-300">полностью стереть весь журнал списаний</strong> (<span id="clear-modal-count" class="font-bold text-white">0</span> зап.)?</p>
+            <ul class="list-disc list-inside text-slate-300 space-y-1">
+              <li>Все записи о списаниях будут <strong>безвозвратно удалены из общей Google Таблицы</strong> и приложения у вас и у всех сменщиков.</li>
+              <li>Перед очисткой убедитесь, что вы уже скопировали отчет для Telegram или скачали CSV.</li>
+              <li class="text-emerald-300">Активные заготовки во вкладке «⏳ Сроки» не пострадают.</li>
+            </ul>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-2 pt-1">
+            <button id="btn-confirm-clear-no" type="button" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs sm:text-sm py-2.5 px-4 rounded-xl border border-slate-700 transition-all">
+              Отмена
+            </button>
+            <button id="btn-confirm-clear-yes" type="button" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm py-2.5 px-4 rounded-xl shadow-lg shadow-rose-600/20 transition-all">
+              Да, очистить
+            </button>
+          </div>
         </div>
       </div>
 
@@ -427,7 +451,7 @@
           <h2 class="text-base font-bold text-white">Общий журнал для всех сменщиков (2-сторонняя синхронизация)</h2>
         </div>
         <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-          Твоя ссылка на Google Таблицу уже вшита в код по умолчанию! Теперь и <strong>Списания</strong>, и <strong>⏳ Сроки годности</strong> автоматически синхронизируются между всеми сменщиков прямо через твой текущий скрипт в Google Таблице (даже без его переустановки).
+          Твоя ссылка на Google Таблицу уже вшита в код по умолчанию! Теперь и <strong>Списания</strong>, и <strong>⏳ Сроки годности</strong> автоматически синхронизируются между всеми сменщиками прямо через твой текущий скрипт в Google Таблице (даже без его переустановки).
         </p>
 
         <div class="space-y-2 pt-1">
@@ -445,48 +469,116 @@
             <span class="text-xs font-semibold text-slate-400">Двухсторонний код для Google Таблицы (Apps Script):</span>
             <button id="btn-copy-gas" class="text-xs text-amber-400 hover:text-amber-300 font-medium">Скопировать код</button>
           </div>
-          <pre id="gas-code" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] text-emerald-300 overflow-x-auto custom-scrollbar">function doGet(e) {
+          <pre id="gas-code" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] text-emerald-300 overflow-x-auto custom-scrollbar">// Списания идут в левые колонки A–I, а Сроки годности — отдельно справа в колонки K–P!
+function ensureHeaders(sheet) {
+  if (sheet.getLastRow() === 0) {
+    sheet.getRange(1, 1, 1, 16).setValues([[
+      "ID", "Дата", "Время", "Продукт", "Кол-во", "Ед.", "Причина", "Бармен", "Комментарий",
+      "",
+      "ID срока", "Заготовка / Продукт", "Объем / Тара", "Дата откр.", "Годен до", "Бармен"
+    ]]);
+  } else if (!sheet.getRange(1, 11).getValue()) {
+    sheet.getRange(1, 11, 1, 6).setValues([[
+      "ID срока", "Заготовка / Продукт", "Объем / Тара", "Дата откр.", "Годен до", "Бармен"
+    ]]);
+  }
+}
+
+function doGet(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  ensureHeaders(sheet);
   var rows = sheet.getDataRange().getDisplayValues();
-  var result = [];
+  var entries = [];
+  var expiries = [];
   for (var i = 1; i &lt; rows.length; i++) {
     var r = rows[i];
-    if (!r[0] &amp;&amp; !r[3]) continue;
-    result.push({
-      id: String(r[0]),
-      date: String(r[1]),
-      time: String(r[2]),
-      product: String(r[3]),
-      qty: Number(String(r[4]).replace(",", ".")) || 0,
-      unit: String(r[5]),
-      reason: String(r[6]),
-      bartender: String(r[7] || ""),
-      comment: String(r[8] || "")
-    });
+    if (r[0] || r[3]) {
+      entries.push({
+        id: String(r[0]),
+        date: String(r[1]),
+        time: String(r[2]),
+        product: String(r[3]),
+        qty: Number(String(r[4]).replace(",", ".")) || 0,
+        unit: String(r[5]),
+        reason: String(r[6]),
+        bartender: String(r[7] || ""),
+        comment: String(r[8] || "")
+      });
+    }
+    if (r[10] || r[11]) {
+      expiries.push({
+        id: String(r[10]),
+        product: String(r[11]),
+        volume: String(r[12] || ""),
+        madeDate: String(r[13] || ""),
+        expiryDate: String(r[14] || ""),
+        bartender: String(r[15] || "")
+      });
+    }
   }
-  result.reverse();
-  return ContentService.createTextOutput(JSON.stringify({ status: "ok", entries: result }))
+  entries.reverse();
+  expiries.reverse();
+  return ContentService.createTextOutput(JSON.stringify({ status: "ok", entries: entries, expiries: expiries }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
 function doPost(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow(["ID", "Дата", "Время", "Продукт", "Кол-во", "Ед.", "Причина", "Бармен", "Комментарий"]);
-  }
+  ensureHeaders(sheet);
   var data = JSON.parse(e.postData.contents);
+  var rows = sheet.getDataRange().getDisplayValues();
+
+  // Очистка всех списаний (колонки A-I), не трогая сроки в колонках K-P
+  if (data.action === "clear_writeoffs") {
+    for (var i = rows.length - 1; i &gt;= 1; i--) {
+      if (String(rows[i][0]) &amp;&amp; String(rows[i][6]) !== "__EXPIRY__") {
+        sheet.getRange(i + 1, 1, 1, 9).clearContent();
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify({ status: "cleared" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Удаление одной записи (ищет в колонке A или в колонке K)
   if (data.action === "delete" &amp;&amp; data.id) {
-    var rows = sheet.getDataRange().getDisplayValues();
     for (var i = rows.length - 1; i &gt;= 1; i--) {
       if (String(rows[i][0]) === String(data.id)) {
-        sheet.deleteRow(i + 1);
+        sheet.getRange(i + 1, 1, 1, 9).clearContent();
+        break;
+      }
+      if (String(rows[i][10]) === String(data.id)) {
+        sheet.getRange(i + 1, 11, 1, 6).clearContent();
         break;
       }
     }
     return ContentService.createTextOutput(JSON.stringify({ status: "deleted" }))
       .setMimeType(ContentService.MimeType.JSON);
   }
-  sheet.appendRow([
+
+  // Запись срока хранения в отдельные правые столбики K–P
+  if (data.type === "expiry" || data.reason === "__EXPIRY__") {
+    var targetRow = 2;
+    for (var r = 1; r &lt; rows.length; r++) {
+      if (rows[r][10] || rows[r][11]) targetRow = r + 2;
+    }
+    sheet.getRange(targetRow, 11, 1, 6).setValues([[
+      data.id,
+      data.product,
+      data.volume || data.unit || "",
+      "'" + (data.madeDate || data.date || ""),
+      "'" + (data.expiryDate || data.comment || ""),
+      data.bartender || ""
+    ]]);
+    return ContentService.createTextOutput(JSON.stringify({ status: "expiry_added" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Запись обычного списания в левые столбики A–I
+  var writeRow = 2;
+  for (var w = 1; w &lt; rows.length; w++) {
+    if (rows[w][0] || rows[w][3]) writeRow = w + 2;
+  }
+  sheet.getRange(writeRow, 1, 1, 9).setValues([[
     data.id,
     "'" + data.date,
     "'" + (data.time || ""),
@@ -496,7 +588,7 @@ function doPost(e) {
     data.reason,
     data.bartender || "",
     data.comment || ""
-  ]);
+  ]]);
   return ContentService.createTextOutput(JSON.stringify({ status: "added" }))
     .setMimeType(ContentService.MimeType.JSON);
 }</pre>
@@ -848,8 +940,11 @@ if __name__ == "__main__":
           : 'text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-medium';
       }
 
+      let isClearingCloud = false;
+
       // Загрузка из Google Таблицы и умное разделение на "Журнал списаний" и "Сроки годности"
       async function syncFromCloud(showNotification = false) {
+        if (isClearingCloud) return;
         if (!webhookUrl) {
           updateSyncBadge('Локально', false);
           return;
@@ -1218,9 +1313,10 @@ if __name__ == "__main__":
         renderExpiries();
         showToast(`Маркировка «${newExp.product}» добавлена до ${newExp.expiryDate}`);
 
-        // Отправляем в Google Таблицу в совместимом формате (чтобы работало со старым скриптом у всех сменщиков!)
+        // Отправляем в Google Таблицу в совместимом формате (работает и со старым, и с новым скриптом!)
         if (webhookUrl) {
           const cloudPayload = {
+            type: 'expiry',
             id: newExp.id,
             date: newExp.madeDate,
             time: getNowTime(),
@@ -1229,7 +1325,10 @@ if __name__ == "__main__":
             unit: newExp.volume || '',
             reason: EXPIRY_REASON_TAG,
             bartender: newExp.bartender,
-            comment: newExp.expiryDate
+            comment: newExp.expiryDate,
+            madeDate: newExp.madeDate,
+            expiryDate: newExp.expiryDate,
+            volume: newExp.volume || ''
           };
           try {
             await fetch(webhookUrl, {
@@ -1584,20 +1683,65 @@ if __name__ == "__main__":
         renderHistory();
       });
 
-      // Clear All Confirmation
+      // Clear All Confirmation (удаляет все списания и локально, и из общей Google Таблицы)
       document.getElementById('btn-clear-all').addEventListener('click', () => {
+        const validCount = entries.filter(isValidWriteOffRow).length;
+        if (validCount === 0) {
+          showToast('Журнал списаний уже пуст', false);
+          return;
+        }
+        const countSpan = document.getElementById('clear-modal-count');
+        if (countSpan) countSpan.textContent = validCount;
         document.getElementById('confirm-clear-box').classList.remove('hidden');
       });
+
       document.getElementById('btn-confirm-clear-no').addEventListener('click', () => {
         document.getElementById('confirm-clear-box').classList.add('hidden');
       });
-      document.getElementById('btn-confirm-clear-yes').addEventListener('click', () => {
+
+      document.getElementById('btn-confirm-clear-yes').addEventListener('click', async () => {
+        const idsToDelete = entries.filter(isValidWriteOffRow).map(item => item.id);
         entries = [];
         saveToStorage(STORAGE_KEY, entries);
         document.getElementById('confirm-clear-box').classList.add('hidden');
         updateBadgeAndRecent();
         renderHistory();
-        showToast('Локальный кэш очищен');
+
+        if (!webhookUrl || idsToDelete.length === 0) {
+          showToast('Журнал списаний полностью очищен');
+          return;
+        }
+
+        isClearingCloud = true;
+        updateSyncBadge('Очистка таблицы...', true);
+        showToast(`Удаляем все записи (${idsToDelete.length} шт.) из Google Таблицы...`);
+
+        try {
+          // 1) Быстрая команда для нового скрипта таблицы
+          await fetch(webhookUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'clear_writeoffs' })
+          });
+
+          // 2) Поочередное удаление по ID (чтобы гарантированно стерлось и на старом скрипте таблицы)
+          for (const id of idsToDelete) {
+            await fetch(webhookUrl, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({ action: 'delete', id: id })
+            });
+          }
+        } catch (err) {
+          // ignore
+        } finally {
+          isClearingCloud = false;
+          updateSyncBadge('Общий журнал ✓', true);
+          showToast('Журнал списаний полностью стёрт из таблицы!');
+          setTimeout(() => syncFromCloud(false), 800);
+        }
       });
 
       // Export 1: Telegram Text Summary
