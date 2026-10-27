@@ -469,30 +469,52 @@
             <span class="text-xs font-semibold text-slate-400">Двухсторонний код для Google Таблицы (Apps Script):</span>
             <button id="btn-copy-gas" class="text-xs text-amber-400 hover:text-amber-300 font-medium">Скопировать код</button>
           </div>
-          <pre id="gas-code" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] text-emerald-300 overflow-x-auto custom-scrollbar">// Списания идут в левые колонки A–I, а Сроки годности — отдельно справа в колонки K–P!
-function ensureHeaders(sheet) {
+          <pre id="gas-code" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] text-emerald-300 overflow-x-auto custom-scrollbar">// Списания идут слева в колонки A–I, а Сроки хранения — отдельно справа в колонки K–P!
+// Также скрипт сам переносит старые записи __EXPIRY__ из A–I в правую таблицу K–P.
+function ensureHeadersAndMigrate(sheet) {
   if (sheet.getLastRow() === 0) {
     sheet.getRange(1, 1, 1, 16).setValues([[
       "ID", "Дата", "Время", "Продукт", "Кол-во", "Ед.", "Причина", "Бармен", "Комментарий",
       "",
       "ID срока", "Заготовка / Продукт", "Объем / Тара", "Дата откр.", "Годен до", "Бармен"
     ]]);
-  } else if (!sheet.getRange(1, 11).getValue()) {
+    return;
+  }
+  if (!sheet.getRange(1, 11).getValue()) {
     sheet.getRange(1, 11, 1, 6).setValues([[
       "ID срока", "Заготовка / Продукт", "Объем / Тара", "Дата откр.", "Годен до", "Бармен"
     ]]);
+  }
+  var rows = sheet.getDataRange().getDisplayValues();
+  var nextExpRow = 2;
+  for (var k = 1; k &lt; rows.length; k++) {
+    if (rows[k][10] || rows[k][11]) nextExpRow = k + 2;
+  }
+  for (var i = 1; i &lt; rows.length; i++) {
+    var r = rows[i];
+    if (String(r[6]) === "__EXPIRY__" || String(r[0]).indexOf("exp-") === 0) {
+      if (r[3]) {
+        sheet.getRange(nextExpRow, 11, 1, 6).setValues([[
+          String(r[0]), String(r[3]), String(r[5] || ""), "'" + String(r[1] || ""), "'" + String(r[8] || ""), String(r[7] || "")
+        ]]);
+        nextExpRow++;
+      }
+      sheet.getRange(i + 1, 1, 1, 9).clearContent();
+    } else if (String(r[0]) === "undefined" || (!r[1] &amp;&amp; !r[6] &amp;&amp; (r[0] || r[3]))) {
+      sheet.getRange(i + 1, 1, 1, 9).clearContent();
+    }
   }
 }
 
 function doGet(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  ensureHeaders(sheet);
+  ensureHeadersAndMigrate(sheet);
   var rows = sheet.getDataRange().getDisplayValues();
   var entries = [];
   var expiries = [];
   for (var i = 1; i &lt; rows.length; i++) {
     var r = rows[i];
-    if (r[0] || r[3]) {
+    if ((r[0] || r[3]) &amp;&amp; String(r[6]) !== "__EXPIRY__") {
       entries.push({
         id: String(r[0]),
         date: String(r[1]),
@@ -524,14 +546,14 @@ function doGet(e) {
 
 function doPost(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  ensureHeaders(sheet);
+  ensureHeadersAndMigrate(sheet);
   var data = JSON.parse(e.postData.contents);
   var rows = sheet.getDataRange().getDisplayValues();
 
-  // Очистка всех списаний (колонки A-I), не трогая сроки в колонках K-P
-  if (data.action === "clear_writeoffs") {
+  // Полная очистка журнала списаний (колонки A-I), не трогая сроки в колонках K-P
+  if (data.action === "clear_writeoffs" || (data.action === "delete" &amp;&amp; data.id === "__CLEAR_WRITEOFFS__")) {
     for (var i = rows.length - 1; i &gt;= 1; i--) {
-      if (String(rows[i][0]) &amp;&amp; String(rows[i][6]) !== "__EXPIRY__") {
+      if (rows[i][0] || rows[i][3]) {
         sheet.getRange(i + 1, 1, 1, 9).clearContent();
       }
     }
@@ -681,6 +703,7 @@ if __name__ == "__main__":
       const EXPIRY_KEY = 'bar_expiries_v2';
       const WEBHOOK_KEY = 'bar_webhook_v1';
       const BARTENDER_KEY = 'bar_bartender_name_v1';
+      const DELETED_IDS_KEY = 'bar_deleted_ids_v1';
 
       const defaultPresets = [
         { name: 'Лайм', unit: 'г' },
@@ -883,9 +906,25 @@ if __name__ == "__main__":
         }
       ];
 
-      let entries = loadFromStorage(STORAGE_KEY, sampleEntries).filter(isValidWriteOffRow);
+      let deletedIds = loadFromStorage(DELETED_IDS_KEY, []);
+      function isDeletedId(id) {
+        return deletedIds.includes(String(id || ''));
+      }
+      function markIdsDeleted(ids) {
+        let changed = false;
+        ids.forEach(id => {
+          const s = String(id || '');
+          if (s && !deletedIds.includes(s)) {
+            deletedIds.push(s);
+            changed = true;
+          }
+        });
+        if (changed) saveToStorage(DELETED_IDS_KEY, deletedIds);
+      }
+
+      let entries = loadFromStorage(STORAGE_KEY, sampleEntries).filter(item => isValidWriteOffRow(item) && !isDeletedId(item.id));
       let presets = loadFromStorage(PRESETS_KEY, defaultPresets);
-      let expiries = loadFromStorage(EXPIRY_KEY, []);
+      let expiries = loadFromStorage(EXPIRY_KEY, []).filter(item => !isDeletedId(item.id));
       let webhookUrl = loadFromStorage(WEBHOOK_KEY, '') || DEFAULT_CLOUD_URL;
       let savedBartender = loadFromStorage(BARTENDER_KEY, '');
 
@@ -958,6 +997,7 @@ if __name__ == "__main__":
             const cloudExpiries = [];
 
             data.entries.forEach(rawRow => {
+              if (!rawRow || isDeletedId(rawRow.id)) return;
               if (String(rawRow.reason || '') === EXPIRY_REASON_TAG) {
                 cloudExpiries.push(normalizeExpiry(rawRow));
               } else if (isValidWriteOffRow(rawRow)) {
@@ -970,7 +1010,7 @@ if __name__ == "__main__":
             if (Array.isArray(data.expiries)) {
               const seenIds = new Set(cloudExpiries.map(x => x.id));
               data.expiries.forEach(ex => {
-                if (!seenIds.has(String(ex.id))) {
+                if (ex && !isDeletedId(ex.id) && !seenIds.has(String(ex.id))) {
                   cloudExpiries.push(normalizeExpiry(ex));
                 }
               });
@@ -1313,7 +1353,7 @@ if __name__ == "__main__":
         renderExpiries();
         showToast(`Маркировка «${newExp.product}» добавлена до ${newExp.expiryDate}`);
 
-        // Отправляем в Google Таблицу в совместимом формате (работает и со старым, и с новым скриптом!)
+        // Отправляем в Google Таблицу в совместимом формате (чтобы работало со старым скриптом у всех сменщиков!)
         if (webhookUrl) {
           const cloudPayload = {
             type: 'expiry',
@@ -1345,6 +1385,7 @@ if __name__ == "__main__":
       });
 
       async function deleteExpiryItem(id) {
+        markIdsDeleted([id]);
         expiries = expiries.filter(item => item.id !== id);
         saveToStorage(EXPIRY_KEY, expiries);
         renderExpiries();
@@ -1535,6 +1576,7 @@ if __name__ == "__main__":
       });
 
       async function deleteEntry(id) {
+        markIdsDeleted([id]);
         entries = entries.filter(item => item.id !== id);
         saveToStorage(STORAGE_KEY, entries);
         updateBadgeAndRecent();
@@ -1701,6 +1743,7 @@ if __name__ == "__main__":
 
       document.getElementById('btn-confirm-clear-yes').addEventListener('click', async () => {
         const idsToDelete = entries.filter(isValidWriteOffRow).map(item => item.id);
+        markIdsDeleted(idsToDelete);
         entries = [];
         saveToStorage(STORAGE_KEY, entries);
         document.getElementById('confirm-clear-box').classList.add('hidden');
@@ -1717,15 +1760,15 @@ if __name__ == "__main__":
         showToast(`Удаляем все записи (${idsToDelete.length} шт.) из Google Таблицы...`);
 
         try {
-          // 1) Быстрая команда для нового скрипта таблицы
+          // 1) Команда массовой очистки (отправляется через action: 'delete', чтобы старый скрипт не создавал пустую строку!)
           await fetch(webhookUrl, {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'clear_writeoffs' })
+            body: JSON.stringify({ action: 'delete', id: '__CLEAR_WRITEOFFS__' })
           });
 
-          // 2) Поочередное удаление по ID (чтобы гарантированно стерлось и на старом скрипте таблицы)
+          // 2) Поочередное удаление каждого ID из таблицы
           for (const id of idsToDelete) {
             await fetch(webhookUrl, {
               method: 'POST',
@@ -1739,8 +1782,7 @@ if __name__ == "__main__":
         } finally {
           isClearingCloud = false;
           updateSyncBadge('Общий журнал ✓', true);
-          showToast('Журнал списаний полностью стёрт из таблицы!');
-          setTimeout(() => syncFromCloud(false), 800);
+          showToast('Журнал списаний полностью очищен!');
         }
       });
 
@@ -1847,8 +1889,8 @@ if __name__ == "__main__":
       });
 
       // Init Page
-      entries = entries.filter(isValidWriteOffRow).map(normalizeEntry);
-      expiries = expiries.map(normalizeExpiry);
+      entries = entries.filter(item => isValidWriteOffRow(item) && !isDeletedId(item.id)).map(normalizeEntry);
+      expiries = expiries.filter(item => !isDeletedId(item.id)).map(normalizeExpiry);
       document.getElementById('input-date').value = getTodayISO();
       document.getElementById('exp-made-date').value = getTodayISO();
       recalcExpiryDateFromDays();
