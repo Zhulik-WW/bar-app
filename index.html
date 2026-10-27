@@ -86,6 +86,10 @@
           <span>⏳ Сроки</span>
           <span id="badge-expiry" class="px-1.5 py-0.5 text-[10px] rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 font-semibold">0</span>
         </button>
+        <button id="tab-btn-recipes" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-300 hover:text-white flex items-center gap-1 whitespace-nowrap">
+          <span>📖 ТК</span>
+          <span id="badge-recipes" class="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-700 text-slate-200 font-semibold">0</span>
+        </button>
         <button id="tab-btn-history" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-300 hover:text-white flex items-center gap-1 whitespace-nowrap">
           <span>Журнал</span>
           <span id="badge-count" class="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-700 text-slate-200 font-semibold">0</span>
@@ -345,6 +349,129 @@
 
     </section>
 
+    <!-- VIEW 5: TECH CARDS LIBRARY ("БИБЛИОТЕКА ТК") -->
+    <section id="view-recipes" class="hidden space-y-5">
+
+      <!-- Top Bar: Search, Category Pills & Add Button -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3.5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <span>📖 Библиотека технологических карт (ТК)</span>
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">Единая база рецептур коктейлей, заготовок и лимонадов для всей смены</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" id="btn-tk-refresh" class="text-xs bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 px-2.5 py-2 rounded-xl font-medium transition-all">
+              🔄 Обновить
+            </button>
+            <button type="button" id="btn-toggle-tk-form" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-3.5 py-2 rounded-xl shadow-sm transition-all">
+              + Добавить ТК
+            </button>
+          </div>
+        </div>
+
+        <!-- Search Input -->
+        <div>
+          <input id="tk-search" type="text" placeholder="🔍 Поиск по названию ТК или ингредиенту (напр. Негрони, джин, маракуйя)..." class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
+        </div>
+
+        <!-- Category Filter Buttons -->
+        <div id="tk-category- pills" class="flex flex-wrap gap-1.5">
+          <button type="button" data-tkcat="ALL" class="tk-cat-btn px-3 py-1.5 rounded-xl text-xs font-semibold transition-all bg-amber-500 text-slate-950">
+            Все (<span id="tk-count-all">0</span>)
+          </button>
+          <button type="button" data-tkcat="Коктейли" class="tk-cat-btn px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-slate-800 text-slate-300 hover:text-white border border-slate-700">
+            🍸 Коктейли (<span id="tk-count-cocktails">0</span>)
+          </button>
+          <button type="button" data-tkcat="Заготовки" class="tk-cat-btn px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-slate-800 text-slate-300 hover:text-white border border-slate-700">
+            🧪 Заготовки (<span id="tk-count-preps">0</span>)
+          </button>
+          <button type="button" data-tkcat="Б/А и Лимонады" class="tk-cat-btn px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-slate-800 text-slate-300 hover:text-white border border-slate-700">
+            🍋 Б/А и Лимонады (<span id="tk-count-na">0</span>)
+          </button>
+          <button type="button" data-tkcat="Другое" class="tk-cat-btn px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-slate-800 text-slate-300 hover:text-white border border-slate-700">
+            📦 Другое (<span id="tk-count-other">0</span>)
+          </button>
+        </div>
+      </div>
+
+      <!-- Create / Edit Tech Card Form (Collapsible) -->
+      <form id="tk-form" class="hidden bg-slate-900 border-2 border-amber-500/40 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <h3 id="tk-form-title" class="text-sm sm:text-base font-bold text-white">Новая технологическая карта (ТК)</h3>
+          <button type="button" id="btn-close-tk-form" class="text-xs text-slate-400 hover:text-white px-2 py-1 rounded-lg bg-slate-800">✕ Закрыть</button>
+        </div>
+
+        <input type="hidden" id="tk-edit-id" value="">
+
+        <!-- Name & Category & Base Yield -->
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div class="sm:col-span-2">
+            <label for="tk-name" class="block text-xs font-medium text-slate-400 mb-1">Название напитка / заготовки</label>
+            <input id="tk-name" type="text" required placeholder="Напр. Негрони, Кордиал Лайм-Мята..." class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
+          </div>
+
+          <div>
+            <label for="tk-category" class="block text-xs font-medium text-slate-400 mb-1">Категория</label>
+            <select id="tk-category" class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
+              <option value="Коктейли">🍸 Коктейли</option>
+              <option value="Заготовки">🧪 Заготовки</option>
+              <option value="Б/А и Лимонады">🍋 Б/А и Лимонады</option>
+              <option value="Другое">📦 Другое</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="tk-yield" class="block text-xs font-medium text-slate-400 mb-1">Выход (на сколько рецепт)</label>
+            <div class="flex gap-1.5">
+              <input id="tk-yield" type="number" step="any" min="0.01" required value="1" class="w-1/2 bg-slate-800/90 border border-slate-700 rounded-xl px-2.5 py-2.5 text-sm font-semibold text-amber-400 focus:outline-none focus:border-amber-500">
+              <select id="tk-yield-unit" class="w-1/2 bg-slate-800/90 border border-slate-700 rounded-xl px-2 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+                <option value="порц">порц</option>
+                <option value="мл">мл</option>
+                <option value="л">л</option>
+                <option value="г">г</option>
+                <option value="кг">кг</option>
+                <option value="шт">шт</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ingredients Builder -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-semibold uppercase tracking-wider text-slate-400">Состав / Ингредиенты по ТК</label>
+            <button type="button" id="btn-add-tk-ing" class="text-xs bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded-lg font-medium transition-all">
+              + Добавить ингредиент
+            </button>
+          </div>
+
+          <div id="tk-ingredients-list" class="space-y-2">
+            <!-- Ingredient rows populated by JS -->
+          </div>
+        </div>
+
+        <!-- Preparation Method / Garnish / Notes -->
+        <div>
+          <label for="tk-notes" class="block text-xs font-medium text-slate-400 mb-1">Метод приготовления / Посуда / Украшение (необязательно)</label>
+          <input id="tk-notes" type="text" placeholder="Напр. Метод Stir, бокал Рокс, большой куб льда, цедра апельсина..." class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
+        </div>
+
+        <div class="flex gap-2 pt-1">
+          <button type="submit" class="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-4 rounded-xl shadow-lg shadow-amber-500/10 transition-all text-sm">
+            Сохранить ТК в базу
+          </button>
+        </div>
+      </form>
+
+      <!-- Tech Cards Grid / List -->
+      <div id="tk-cards-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <!-- Populated by JS -->
+      </div>
+
+    </section>
+
     <!-- VIEW 2: HISTORY & EXPORT -->
     <section id="view-history" class="hidden space-y-4">
       
@@ -424,7 +551,7 @@
             <ul class="list-disc list-inside text-slate-300 space-y-1">
               <li>Все записи о списаниях будут <strong>безвозвратно удалены из общей Google Таблицы</strong> и приложения у вас и у всех сменщиков.</li>
               <li>Перед очисткой убедитесь, что вы уже скопировали отчет для Telegram или скачали CSV.</li>
-              <li class="text-emerald-300">Активные заготовки во вкладке «⏳ Сроки» не пострадают.</li>
+              <li class="text-emerald-300">Активные заготовки во вкладке «⏳ Сроки» и база «📖 ТК» не пострадают.</li>
             </ul>
           </div>
 
@@ -451,7 +578,7 @@
           <h2 class="text-base font-bold text-white">Общий журнал для всех сменщиков (2-сторонняя синхронизация)</h2>
         </div>
         <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-          Твоя ссылка на Google Таблицу уже вшита в код по умолчанию! Теперь и <strong>Списания</strong>, и <strong>⏳ Сроки годности</strong> автоматически синхронизируются между всеми сменщиками прямо через твой текущий скрипт в Google Таблице (даже без его переустановки).
+          Твоя ссылка на Google Таблицу уже вшита в код по умолчанию! Теперь синхронизируются все три раздела: <strong>Списания</strong> (колонки A–I), <strong>⏳ Сроки годности</strong> (колонки K–P) и отдельная вкладка <strong>📖 ТК</strong> внизу таблицы.
         </p>
 
         <div class="space-y-2 pt-1">
@@ -469,8 +596,9 @@
             <span class="text-xs font-semibold text-slate-400">Двухсторонний код для Google Таблицы (Apps Script):</span>
             <button id="btn-copy-gas" class="text-xs text-amber-400 hover:text-amber-300 font-medium">Скопировать код</button>
           </div>
-          <pre id="gas-code" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] text-emerald-300 overflow-x-auto custom-scrollbar">// Списания идут слева в колонки A–I, а Сроки хранения — отдельно справа в колонки K–P!
-// Также скрипт сам переносит старые записи __EXPIRY__ из A–I в правую таблицу K–P.
+          <pre id="gas-code" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] text-emerald-300 overflow-x-auto custom-scrollbar">// Лист 1: Списания (колонки A–I) и Сроки хранения (колонки K–P)
+// Лист "ТК": Отдельная вкладка внизу таблицы для библиотеки техкарт
+
 function ensureHeadersAndMigrate(sheet) {
   if (sheet.getLastRow() === 0) {
     sheet.getRange(1, 1, 1, 16).setValues([[
@@ -506,15 +634,33 @@ function ensureHeadersAndMigrate(sheet) {
   }
 }
 
+function getOrCreateTkSheet(ss) {
+  var tkSheet = ss.getSheetByName("ТК");
+  if (!tkSheet) {
+    tkSheet = ss.insertSheet("ТК");
+    tkSheet.getRange(1, 1, 1, 8).setValues([[
+      "ID ТК", "Название", "Категория", "Выход", "Ед. выхода", "Состав (ингредиенты)", "Метод / Подача", "JSON"
+    ]]);
+  } else if (tkSheet.getLastRow() === 0) {
+    tkSheet.getRange(1, 1, 1, 8).setValues([[
+      "ID ТК", "Название", "Категория", "Выход", "Ед. выхода", "Состав (ингредиенты)", "Метод / Подача", "JSON"
+    ]]);
+  }
+  return tkSheet;
+}
+
 function doGet(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheets()[0];
+  var tkSheet = getOrCreateTkSheet(ss);
   ensureHeadersAndMigrate(sheet);
+
   var rows = sheet.getDataRange().getDisplayValues();
   var entries = [];
   var expiries = [];
   for (var i = 1; i &lt; rows.length; i++) {
     var r = rows[i];
-    if ((r[0] || r[3]) &amp;&amp; String(r[6]) !== "__EXPIRY__") {
+    if ((r[0] || r[3]) &amp;&amp; String(r[6]) !== "__EXPIRY__" &amp;&amp; String(r[6]) !== "__RECIPE__") {
       entries.push({
         id: String(r[0]),
         date: String(r[1]),
@@ -538,19 +684,50 @@ function doGet(e) {
       });
     }
   }
+
+  var tkRows = tkSheet.getDataRange().getDisplayValues();
+  var recipes = [];
+  for (var t = 1; t &lt; tkRows.length; t++) {
+    var tr = tkRows[t];
+    if (!tr[0] &amp;&amp; !tr[1]) continue;
+    var parsedIng = [];
+    try {
+      parsedIng = tr[7] ? JSON.parse(tr[7]) : [];
+    } catch (err) {
+      parsedIng = [];
+    }
+    recipes.push({
+      id: String(tr[0]),
+      name: String(tr[1]),
+      category: String(tr[2] || "Коктейли"),
+      baseYield: Number(String(tr[3]).replace(",", ".")) || 1,
+      yieldUnit: String(tr[4] || "порц"),
+      ingredientsText: String(tr[5] || ""),
+      notes: String(tr[6] || ""),
+      ingredients: parsedIng
+    });
+  }
+
   entries.reverse();
   expiries.reverse();
-  return ContentService.createTextOutput(JSON.stringify({ status: "ok", entries: entries, expiries: expiries }))
-    .setMimeType(ContentService.MimeType.JSON);
+  recipes.reverse();
+  return ContentService.createTextOutput(JSON.stringify({
+    status: "ok",
+    entries: entries,
+    expiries: expiries,
+    recipes: recipes
+  })).setMimeType(ContentService.MimeType.JSON);
 }
 
 function doPost(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheets()[0];
+  var tkSheet = getOrCreateTkSheet(ss);
   ensureHeadersAndMigrate(sheet);
+
   var data = JSON.parse(e.postData.contents);
   var rows = sheet.getDataRange().getDisplayValues();
 
-  // Полная очистка журнала списаний (колонки A-I), не трогая сроки в колонках K-P
   if (data.action === "clear_writeoffs" || (data.action === "delete" &amp;&amp; data.id === "__CLEAR_WRITEOFFS__")) {
     for (var i = rows.length - 1; i &gt;= 1; i--) {
       if (rows[i][0] || rows[i][3]) {
@@ -561,7 +738,6 @@ function doPost(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
-  // Удаление одной записи (ищет в колонке A или в колонке K)
   if (data.action === "delete" &amp;&amp; data.id) {
     for (var i = rows.length - 1; i &gt;= 1; i--) {
       if (String(rows[i][0]) === String(data.id)) {
@@ -573,11 +749,47 @@ function doPost(e) {
         break;
       }
     }
+    var tkRows = tkSheet.getDataRange().getDisplayValues();
+    for (var t = tkRows.length - 1; t &gt;= 1; t--) {
+      if (String(tkRows[t][0]) === String(data.id)) {
+        tkSheet.deleteRow(t + 1);
+        break;
+      }
+    }
     return ContentService.createTextOutput(JSON.stringify({ status: "deleted" }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
-  // Запись срока хранения в отдельные правые столбики K–P
+  if (data.type === "recipe" || data.reason === "__RECIPE__") {
+    var ingList = Array.isArray(data.ingredients) ? data.ingredients : [];
+    var humanIng = ingList.map(function(x) { return x.name + " — " + x.qty + " " + x.unit; }).join(" | ");
+    var rowValues = [[
+      data.id,
+      data.name || data.product || "",
+      data.category || "Коктейли",
+      data.baseYield || 1,
+      data.yieldUnit || "порц",
+      humanIng,
+      data.notes || "",
+      JSON.stringify(ingList)
+    ]];
+
+    var tkData = tkSheet.getDataRange().getDisplayValues();
+    var updated = false;
+    for (var u = 1; u &lt; tkData.length; u++) {
+      if (String(tkData[u][0]) === String(data.id)) {
+        tkSheet.getRange(u + 1, 1, 1, 8).setValues(rowValues);
+        updated = true;
+        break;
+      }
+    }
+    if (!updated) {
+      tkSheet.appendRow(rowValues[0]);
+    }
+    return ContentService.createTextOutput(JSON.stringify({ status: "recipe_saved" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   if (data.type === "expiry" || data.reason === "__EXPIRY__") {
     var targetRow = 2;
     for (var r = 1; r &lt; rows.length; r++) {
@@ -595,7 +807,6 @@ function doPost(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
-  // Запись обычного списания в левые столбики A–I
   var writeRow = 2;
   for (var w = 1; w &lt; rows.length; w++) {
     if (rows[w][0] || rows[w][3]) writeRow = w + 2;
@@ -695,12 +906,14 @@ if __name__ == "__main__":
       // Твоя ссылка на общую базу Google Таблицы вшита по умолчанию:
       const DEFAULT_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbxXq9GaJvUxNol66_FTGMJR3HbWbcvVekCrYalcSEjXsphcFBICs9GKZsrYwzsy6AxyxQ/exec';
 
-      // Специальная метка, чтобы хранить сроки в той же Google Таблице и автоматически отделять их от списаний:
+      // Специальные метки:
       const EXPIRY_REASON_TAG = '__EXPIRY__';
+      const RECIPE_REASON_TAG = '__RECIPE__';
 
       const STORAGE_KEY = 'bar_writeoffs_v1';
       const PRESETS_KEY = 'bar_presets_v1';
       const EXPIRY_KEY = 'bar_expiries_v2';
+      const RECIPES_KEY = 'bar_recipes_v1';
       const WEBHOOK_KEY = 'bar_webhook_v1';
       const BARTENDER_KEY = 'bar_bartender_name_v1';
       const DELETED_IDS_KEY = 'bar_deleted_ids_v1';
@@ -731,6 +944,54 @@ if __name__ == "__main__":
         { name: 'Вермут открытый', days: 30, volume: '750 мл' }
       ];
 
+      const sampleRecipes = [
+        {
+          id: 'tk-sample-1',
+          name: 'Негрони (Negroni)',
+          category: 'Коктейли',
+          baseYield: 1,
+          yieldUnit: 'порц',
+          notes: 'Метод Stir в смесительном стакане со льдом. Подача в роксе на кубе льда, гарниш — цедра апельсина.',
+          ingredients: [
+            { name: 'Джин сухой', qty: 30, unit: 'мл' },
+            { name: 'Кампари (Campari)', qty: 30, unit: 'мл' },
+            { name: 'Красный сладкий вермут', qty: 30, unit: 'мл' },
+            { name: 'Цедра апельсина (пил)', qty: 1, unit: 'шт' }
+          ]
+        },
+        {
+          id: 'tk-sample-2',
+          name: 'Кордиал Лайм-Мята',
+          category: 'Заготовки',
+          baseYield: 1000,
+          yieldUnit: 'мл',
+          notes: 'Срок хранения: 7 дней в холодильнике. Процедить через фильтр-пакет.',
+          ingredients: [
+            { name: 'Фреш лайма', qty: 350, unit: 'мл' },
+            { name: 'Сахарный сироп 1:1', qty: 500, unit: 'мл' },
+            { name: 'Вода горячая', qty: 150, unit: 'мл' },
+            { name: 'Мята свежая (лист)', qty: 40, unit: 'г' },
+            { name: 'Цедра лайма', qty: 25, unit: 'г' },
+            { name: 'Лимонная кислота', qty: 8, unit: 'г' }
+          ]
+        },
+        {
+          id: 'tk-sample-3',
+          name: 'Лимонад Маракуйя-Цитрус',
+          category: 'Б/А и Лимонады',
+          baseYield: 1,
+          yieldUnit: 'порц',
+          notes: 'Хайбол, лед фраппе/кубы, перемешать барной ложкой. Украсить мятой и слайсом апельсина.',
+          ingredients: [
+            { name: 'Пюре маракуйя', qty: 40, unit: 'г' },
+            { name: 'Фреш лимонный', qty: 20, unit: 'мл' },
+            { name: 'Сироп сахарный', qty: 15, unit: 'мл' },
+            { name: 'Содовая / Газ. вода', qty: 150, unit: 'мл' },
+            { name: 'Мята свежая', qty: 3, unit: 'г' }
+          ]
+        }
+      ];
+
       // Текущая дата по Киеву (ГГГГ-ММ-ДД)
       function getTodayISO() {
         try {
@@ -746,7 +1007,6 @@ if __name__ == "__main__":
         }
       }
 
-      // Прибавить N дней к дате YYYY-MM-DD
       function addDaysISO(dateISO, days) {
         const parts = String(dateISO || getTodayISO()).split('-');
         const dt = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
@@ -757,7 +1017,6 @@ if __name__ == "__main__":
         return `${yyyy}-${mm}-${dd}`;
       }
 
-      // Разница в днях между expiryDate и сегодняшней датой по Киеву
       function getDaysRemaining(expiryISO) {
         const cleanExp = formatShortDate(expiryISO);
         const cleanToday = getTodayISO();
@@ -769,7 +1028,6 @@ if __name__ == "__main__":
         return Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
       }
 
-      // Текущее время по Киеву (ЧЧ:ММ, например 10:30)
       function getNowTime() {
         try {
           return new Intl.DateTimeFormat('ru-RU', {
@@ -784,7 +1042,6 @@ if __name__ == "__main__":
         }
       }
 
-      // Железная очистка даты от длинных строк типа "Mon Oct 26 2026 00:00:00 GMT+0200 (...)"
       function formatShortDate(raw) {
         if (!raw) return '';
         let str = String(raw).trim();
@@ -806,7 +1063,6 @@ if __name__ == "__main__":
         return '';
       }
 
-      // Железная очистка времени от длинных строк типа "Sat Dec 30 1899 01:38:00 GMT+0202 (...)"
       function formatShortTime(raw) {
         if (!raw) return '';
         const str = String(raw).trim();
@@ -818,7 +1074,6 @@ if __name__ == "__main__":
         return '';
       }
 
-      // Проверка: является ли строка из Google Таблицы записью о сроке годности (или старой сломанной строкой exp-)
       function isExpiryRow(item) {
         if (!item) return false;
         const idStr = String(item.id || '');
@@ -826,9 +1081,15 @@ if __name__ == "__main__":
         return reasonStr === EXPIRY_REASON_TAG || idStr.startsWith('exp-');
       }
 
-      // Проверка: является ли запись настоящим валидным списанием (отсекает полупустые сломанные строки)
+      function isRecipeRow(item) {
+        if (!item) return false;
+        const idStr = String(item.id || '');
+        const reasonStr = String(item.reason || '');
+        return reasonStr === RECIPE_REASON_TAG || idStr.startsWith('tk-');
+      }
+
       function isValidWriteOffRow(item) {
-        if (!item || isExpiryRow(item)) return false;
+        if (!item || isExpiryRow(item) || isRecipeRow(item)) return false;
         const reasonStr = String(item.reason || '').trim();
         const qtyNum = Number(item.qty);
         if (!reasonStr || reasonStr === 'undefined' || isNaN(qtyNum) || qtyNum <= 0) {
@@ -856,6 +1117,35 @@ if __name__ == "__main__":
           expiryDate: until,
           volume: vol,
           bartender: String(item.bartender || '')
+        };
+      }
+
+      function normalizeRecipe(item) {
+        let ingList = [];
+        if (Array.isArray(item.ingredients)) {
+          ingList = item.ingredients;
+        } else if (item.comment) {
+          try { ingList = JSON.parse(item.comment); } catch (e) { ingList = []; }
+        }
+        let bYield = Number(item.baseYield);
+        let yUnit = item.yieldUnit || 'порц';
+        if ((!bYield || isNaN(bYield)) && item.time) {
+          const parts = String(item.time).trim().split(/\s+/);
+          bYield = parseFloat(parts[0]) || 1;
+          if (parts[1]) yUnit = parts[1];
+        }
+        return {
+          id: String(item.id || ('tk-' + Date.now())),
+          name: String(item.name || item.product || ''),
+          category: String(item.category || item.date || 'Коктейли'),
+          baseYield: bYield || 1,
+          yieldUnit: String(yUnit || 'порц'),
+          notes: String(item.notes !== undefined ? item.notes : (item.unit || '')),
+          ingredients: ingList.map(ing => ({
+            name: String(ing.name || '').trim(),
+            qty: Number(String(ing.qty || 0).replace(',', '.')) || 0,
+            unit: String(ing.unit || 'мл').trim()
+          })).filter(ing => ing.name)
         };
       }
 
@@ -925,12 +1215,14 @@ if __name__ == "__main__":
       let entries = loadFromStorage(STORAGE_KEY, sampleEntries).filter(item => isValidWriteOffRow(item) && !isDeletedId(item.id));
       let presets = loadFromStorage(PRESETS_KEY, defaultPresets);
       let expiries = loadFromStorage(EXPIRY_KEY, []).filter(item => !isDeletedId(item.id));
+      let recipes = loadFromStorage(RECIPES_KEY, sampleRecipes).filter(item => !isDeletedId(item.id)).map(normalizeRecipe);
       let webhookUrl = loadFromStorage(WEBHOOK_KEY, '') || DEFAULT_CLOUD_URL;
       let savedBartender = loadFromStorage(BARTENDER_KEY, '');
 
       let selectedUnit = 'мл';
       let selectedReason = 'Порча продукта';
       let activeExpiryFilter = 'ALL'; // ALL | RED | YELLOW | GREEN
+      let activeTkCategory = 'ALL'; // ALL | Коктейли | Заготовки | Б/А и Лимонады | Другое
 
       function loadFromStorage(key, fallback) {
         try {
@@ -981,7 +1273,7 @@ if __name__ == "__main__":
 
       let isClearingCloud = false;
 
-      // Загрузка из Google Таблицы и умное разделение на "Журнал списаний" и "Сроки годности"
+      // Загрузка из Google Таблицы (Списания, Сроки и вкладка ТК)
       async function syncFromCloud(showNotification = false) {
         if (isClearingCloud) return;
         if (!webhookUrl) {
@@ -995,37 +1287,53 @@ if __name__ == "__main__":
           if (data && Array.isArray(data.entries)) {
             const cloudWriteOffs = [];
             const cloudExpiries = [];
+            const cloudRecipes = [];
 
             data.entries.forEach(rawRow => {
               if (!rawRow || isDeletedId(rawRow.id)) return;
-              if (String(rawRow.reason || '') === EXPIRY_REASON_TAG) {
+              const rTag = String(rawRow.reason || '');
+              if (rTag === EXPIRY_REASON_TAG) {
                 cloudExpiries.push(normalizeExpiry(rawRow));
+              } else if (rTag === RECIPE_REASON_TAG) {
+                cloudRecipes.push(normalizeRecipe(rawRow));
               } else if (isValidWriteOffRow(rawRow)) {
                 cloudWriteOffs.push(normalizeEntry(rawRow));
               }
-              // Старые сломанные строки (где id начинается с exp- и нет даты) просто игнорируются!
             });
 
-            // Если в таблице также есть отдельный массив data.expiries, объединим без дублей
             if (Array.isArray(data.expiries)) {
-              const seenIds = new Set(cloudExpiries.map(x => x.id));
+              const seenExpIds = new Set(cloudExpiries.map(x => x.id));
               data.expiries.forEach(ex => {
-                if (ex && !isDeletedId(ex.id) && !seenIds.has(String(ex.id))) {
+                if (ex && !isDeletedId(ex.id) && !seenExpIds.has(String(ex.id))) {
                   cloudExpiries.push(normalizeExpiry(ex));
+                }
+              });
+            }
+
+            if (Array.isArray(data.recipes)) {
+              const seenTkIds = new Set(cloudRecipes.map(x => x.id));
+              data.recipes.forEach(rc => {
+                if (rc && !isDeletedId(rc.id) && !seenTkIds.has(String(rc.id))) {
+                  cloudRecipes.push(normalizeRecipe(rc));
                 }
               });
             }
 
             entries = cloudWriteOffs;
             expiries = cloudExpiries;
+            if (cloudRecipes.length > 0 || Array.isArray(data.recipes)) {
+              recipes = cloudRecipes.length > 0 ? cloudRecipes : recipes;
+              saveToStorage(RECIPES_KEY, recipes);
+            }
             saveToStorage(STORAGE_KEY, entries);
             saveToStorage(EXPIRY_KEY, expiries);
           }
           updateBadgeAndRecent();
           renderHistory();
           renderExpiries();
+          renderRecipes();
           updateSyncBadge('Общий журнал ✓', true);
-          if (showNotification) showToast('Общие списания и сроки обновлены!');
+          if (showNotification) showToast('Данные синхронизированы с таблицей!');
         } catch (err) {
           updateSyncBadge('Облако подключено', true);
           if (showNotification) showToast('Не удалось загрузить список (проверь доступ Все / Anyone)', false);
@@ -1061,21 +1369,24 @@ if __name__ == "__main__":
       // Tabs logic
       const tabAdd = document.getElementById('tab-btn-add');
       const tabExpiry = document.getElementById('tab-btn-expiry');
+      const tabRecipes = document.getElementById('tab-btn-recipes');
       const tabHistory = document.getElementById('tab-btn-history');
       const tabSync = document.getElementById('tab-btn-sync');
 
       const viewAdd = document.getElementById('view-add');
       const viewExpiry = document.getElementById('view-expiry');
+      const viewRecipes = document.getElementById('view-recipes');
       const viewHistory = document.getElementById('view-history');
       const viewSync = document.getElementById('view-sync');
 
       function switchTab(tab) {
         viewAdd.classList.add('hidden');
         viewExpiry.classList.add('hidden');
+        viewRecipes.classList.add('hidden');
         viewHistory.classList.add('hidden');
         viewSync.classList.add('hidden');
 
-        [tabAdd, tabExpiry, tabHistory, tabSync].forEach(btn => {
+        [tabAdd, tabExpiry, tabRecipes, tabHistory, tabSync].forEach(btn => {
           btn.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-300 hover:text-white flex items-center gap-1 whitespace-nowrap';
         });
 
@@ -1086,6 +1397,11 @@ if __name__ == "__main__":
           viewExpiry.classList.remove('hidden');
           tabExpiry.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-amber-500 text-slate-950 shadow-sm flex items-center gap-1 whitespace-nowrap';
           renderExpiries();
+          if (webhookUrl) syncFromCloud(false);
+        } else if (tab === 'recipes') {
+          viewRecipes.classList.remove('hidden');
+          tabRecipes.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-amber-500 text-slate-950 shadow-sm flex items-center gap-1 whitespace-nowrap';
+          renderRecipes();
           if (webhookUrl) syncFromCloud(false);
         } else if (tab === 'history') {
           viewHistory.classList.remove('hidden');
@@ -1100,12 +1416,358 @@ if __name__ == "__main__":
 
       tabAdd.addEventListener('click', () => switchTab('add'));
       tabExpiry.addEventListener('click', () => switchTab('expiry'));
+      tabRecipes.addEventListener('click', () => switchTab('recipes'));
       tabHistory.addEventListener('click', () => switchTab('history'));
       tabSync.addEventListener('click', () => switchTab('sync'));
       document.getElementById('btn-goto-history').addEventListener('click', () => switchTab('history'));
       document.getElementById('btn-refresh-recent').addEventListener('click', () => syncFromCloud(true));
       document.getElementById('btn-refresh-cloud').addEventListener('click', () => syncFromCloud(true));
       document.getElementById('btn-exp-refresh').addEventListener('click', () => syncFromCloud(true));
+      document.getElementById('btn-tk-refresh').addEventListener('click', () => syncFromCloud(true));
+
+      // ==========================================
+      // БИБЛИОТЕКА ТК (ТЕХНОЛОГИЧЕСКИЕ КАРТЫ)
+      // ==========================================
+      const tkForm = document.getElementById('tk-form');
+      const tkIngList = document.getElementById('tk-ingredients-list');
+
+      function addTkIngredientRow(name = '', qty = '', unit = 'мл') {
+        const row = document.createElement('div');
+        row.className = 'tk-ing-row flex items-center gap-2';
+        row.innerHTML = `
+          <input type="text" placeholder="Ингредиент (напр. Джин, Фреш лайма)" value="${escapeHtml(name)}" required class="tk-ing-name flex-1 bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
+          <input type="number" step="any" min="0.01" placeholder="Кол-во" value="${escapeHtml(qty)}" required class="tk-ing-qty w-20 sm:w-24 bg-slate-800/90 border border-slate-700 rounded-xl px-2.5 py-2 text-xs sm:text-sm font-semibold text-amber-400 placeholder-slate-500 focus:outline-none focus:border-amber-500">
+          <select class="tk-ing-unit bg-slate-800/90 border border-slate-700 rounded-xl px-2 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-amber-500">
+            <option value="мл" ${unit === 'мл' ? 'selected' : ''}>мл</option>
+            <option value="г" ${unit === 'г' ? 'selected' : ''}>г</option>
+            <option value="шт" ${unit === 'шт' ? 'selected' : ''}>шт</option>
+            <option value="дэш" ${unit === 'дэш' ? 'selected' : ''}>дэш</option>
+            <option value="л" ${unit === 'л' ? 'selected' : ''}>л</option>
+            <option value="кг" ${unit === 'кг' ? 'selected' : ''}>кг</option>
+            <option value="порц" ${unit === 'порц' ? 'selected' : ''}>порц</option>
+          </select>
+          <button type="button" class="btn-remove-ing text-slate-500 hover:text-rose-400 px-2 py-1.5 rounded-lg bg-slate-800/60 text-xs" title="Убрать ингредиент">✕</button>
+        `;
+        row.querySelector('.btn-remove-ing').addEventListener('click', () => {
+          if (tkIngList.querySelectorAll('.tk-ing-row').length > 1) {
+            row.remove();
+          } else {
+            row.querySelector('.tk-ing-name').value = '';
+            row.querySelector('.tk-ing-qty').value = '';
+          }
+        });
+        tkIngList.appendChild(row);
+      }
+
+      function openTkFormForNew() {
+        document.getElementById('tk-edit-id').value = '';
+        document.getElementById('tk-form-title').textContent = 'Новая технологическая карта (ТК)';
+        document.getElementById('tk-name').value = '';
+        document.getElementById('tk-category').value = 'Коктейли';
+        document.getElementById('tk-yield').value = '1';
+        document.getElementById('tk-yield-unit').value = 'порц';
+        document.getElementById('tk-notes').value = '';
+        tkIngList.innerHTML = '';
+        addTkIngredientRow('', '', 'мл');
+        addTkIngredientRow('', '', 'мл');
+        addTkIngredientRow('', '', 'мл');
+        tkForm.classList.remove('hidden');
+        document.getElementById('tk-name').focus();
+      }
+
+      function openTkFormForEdit(recipe) {
+        document.getElementById('tk-edit-id').value = recipe.id;
+        document.getElementById('tk-form-title').textContent = `Редактирование ТК: ${recipe.name}`;
+        document.getElementById('tk-name').value = recipe.name;
+        document.getElementById('tk-category').value = recipe.category || 'Коктейли';
+        document.getElementById('tk-yield').value = recipe.baseYield || 1;
+        document.getElementById('tk-yield-unit').value = recipe.yieldUnit || 'порц';
+        document.getElementById('tk-notes').value = recipe.notes || '';
+        tkIngList.innerHTML = '';
+        if (Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0) {
+          recipe.ingredients.forEach(ing => addTkIngredientRow(ing.name, ing.qty, ing.unit));
+        } else {
+          addTkIngredientRow('', '', 'мл');
+        }
+        tkForm.classList.remove('hidden');
+        tkForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      // Авто-подстановка базового выхода при смене категории
+      document.getElementById('tk-category').addEventListener('change', (e) => {
+        if (!document.getElementById('tk-edit-id').value) {
+          if (e.target.value === 'Заготовки') {
+            document.getElementById('tk-yield').value = '1000';
+            document.getElementById('tk-yield-unit').value = 'мл';
+          } else {
+            document.getElementById('tk-yield').value = '1';
+            document.getElementById('tk-yield-unit').value = 'порц';
+          }
+        }
+      });
+
+      document.getElementById('btn-toggle-tk-form').addEventListener('click', () => {
+        if (tkForm.classList.contains('hidden')) {
+          openTkFormForNew();
+        } else {
+          tkForm.classList.add('hidden');
+        }
+      });
+
+      document.getElementById('btn-close-tk-form').addEventListener('click', () => {
+        tkForm.classList.add('hidden');
+      });
+
+      document.getElementById('btn-add-tk-ing').addEventListener('click', () => {
+        addTkIngredientRow('', '', 'мл');
+      });
+
+      function getTkCategoryBadge(category) {
+        const map = {
+          'Коктейли': { icon: '🍸', cls: 'bg-amber-500/15 text-amber-300 border-amber-500/30' },
+          'Заготовки': { icon: '🧪', cls: 'bg-purple-500/15 text-purple-300 border-purple-500/30' },
+          'Б/А и Лимонады': { icon: '🍋', cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
+          'Другое': { icon: '📦', cls: 'bg-sky-500/15 text-sky-300 border-sky-500/30' }
+        };
+        const st = map[category] || map['Другое'];
+        return `<span class="px-2 py-0.5 text-[11px] rounded-md border font-semibold ${st.cls}">${st.icon} ${escapeHtml(category)}</span>`;
+      }
+
+      function renderRecipes() {
+        const cleanList = recipes.filter(r => r && !isDeletedId(r.id)).map(normalizeRecipe);
+        document.getElementById('badge-recipes').textContent = cleanList.length;
+
+        // Счетчики по категориям
+        let cCocktails = 0, cPreps = 0, cNa = 0, cOther = 0;
+        cleanList.forEach(r => {
+          if (r.category === 'Коктейли') cCocktails++;
+          else if (r.category === 'Заготовки') cPreps++;
+          else if (r.category === 'Б/А и Лимонады') cNa++;
+          else cOther++;
+        });
+
+        document.getElementById('tk-count-all').textContent = cleanList.length;
+        document.getElementById('tk-count-cocktails').textContent = cCocktails;
+        document.getElementById('tk-count-preps').textContent = cPreps;
+        document.getElementById('tk-count-na').textContent = cNa;
+        document.getElementById('tk-count-other').textContent = cOther;
+
+        // Подсветка активной кнопки категории
+        document.querySelectorAll('.tk-cat-btn').forEach(btn => {
+          if (btn.dataset.tkcat === activeTkCategory) {
+            btn.className = 'tk-cat-btn px-3 py-1.5 rounded-xl text-xs font-semibold transition-all bg-amber-500 text-slate-950 shadow-sm';
+          } else {
+            btn.className = 'tk-cat-btn px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-slate-800 text-slate-300 hover:text-white border border-slate-700';
+          }
+        });
+
+        const q = (document.getElementById('tk-search').value || '').toLowerCase().trim();
+        const filtered = cleanList.filter(r => {
+          const matchCat = activeTkCategory === 'ALL' || r.category === activeTkCategory;
+          const matchQ = !q ||
+            r.name.toLowerCase().includes(q) ||
+            (r.notes && r.notes.toLowerCase().includes(q)) ||
+            r.ingredients.some(i => i.name.toLowerCase().includes(q));
+          return matchCat && matchQ;
+        });
+
+        const container = document.getElementById('tk-cards-container');
+        container.innerHTML = '';
+
+        if (filtered.length === 0) {
+          container.innerHTML = `
+            <div class="sm:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center text-sm text-slate-500">
+              Технологических карт по выбранному фильтру пока нет. Нажми <strong>«+ Добавить ТК»</strong> выше!
+            </div>
+          `;
+          return;
+        }
+
+        filtered.forEach(recipe => {
+          const card = document.createElement('div');
+          card.className = 'bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-4 shadow-lg flex flex-col justify-between gap-3 transition-all';
+
+          const ingRowsHtml = recipe.ingredients.map(ing => `
+            <div class="flex items-center justify-between py-1 border-b border-slate-800/70 last:border-b-0 text-xs">
+              <span class="text-slate-200 font-medium">${escapeHtml(ing.name)}</span>
+              <span class="font-bold text-amber-400 whitespace-nowrap ml-2">${escapeHtml(ing.qty)} ${escapeHtml(ing.unit)}</span>
+            </div>
+          `).join('');
+
+          card.innerHTML = `
+            <div class="space-y-2.5">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <h3 class="text-sm sm:text-base font-bold text-white leading-snug">${escapeHtml(recipe.name)}</h3>
+                  <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                    ${getTkCategoryBadge(recipe.category)}
+                    <span class="text-[11px] text-slate-300 bg-slate-800 px-2 py-0.5 rounded-md border border-slate-700 font-medium">
+                      Выход: <strong class="text-white">${escapeHtml(recipe.baseYield)} ${escapeHtml(recipe.yieldUnit)}</strong>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Состав -->
+              <div class="bg-slate-950/60 border border-slate-800/90 rounded-xl px-3 py-2">
+                ${ingRowsHtml || '<div class="text-xs text-slate-500 py-1">Состав не указан</div>'}
+              </div>
+
+              ${recipe.notes ? `<p class="text-xs text-slate-400 leading-relaxed">💡 ${escapeHtml(recipe.notes)}</p>` : ''}
+            </div>
+
+            <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-800/80">
+              <button type="button" class="btn-tk-copy text-xs bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 px-2.5 py-1.5 rounded-lg font-medium transition-all">
+                📋 В TG
+              </button>
+              <div class="flex items-center gap-1.5">
+                <button type="button" class="btn-tk-edit text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-lg transition-all">
+                  ✏️ Изм.
+                </button>
+                <button type="button" class="btn-tk-delete text-xs text-slate-500 hover:text-rose-400 bg-slate-800/60 hover:bg-slate-800 px-2.5 py-1.5 rounded-lg transition-all" title="Удалить ТК">
+                  ✕
+                </button>
+              </div>
+            </div>
+          `;
+
+          card.querySelector('.btn-tk-copy').addEventListener('click', () => {
+            let lines = [
+              `📖 ТК: ${recipe.name} (${recipe.category})`,
+              `⚖️ Выход: ${recipe.baseYield} ${recipe.yieldUnit}`,
+              ''
+            ];
+            recipe.ingredients.forEach(ing => {
+              lines.push(`• ${ing.name} — ${ing.qty} ${ing.unit}`);
+            });
+            if (recipe.notes) {
+              lines.push('');
+              lines.push(`💡 ${recipe.notes}`);
+            }
+            copyTextToClipboard(lines.join('\n'), `ТК «${recipe.name}» скопирована!`);
+          });
+
+          card.querySelector('.btn-tk-edit').addEventListener('click', () => {
+            openTkFormForEdit(recipe);
+          });
+
+          card.querySelector('.btn-tk-delete').addEventListener('click', () => {
+            deleteRecipeItem(recipe.id);
+          });
+
+          container.appendChild(card);
+        });
+      }
+
+      document.querySelectorAll('.tk-cat-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          activeTkCategory = btn.dataset.tkcat;
+          renderRecipes();
+        });
+      });
+
+      document.getElementById('tk-search').addEventListener('input', renderRecipes);
+
+      // Submit Tech Card Form (Create or Edit)
+      tkForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const editId = document.getElementById('tk-edit-id').value.trim();
+        const nameVal = document.getElementById('tk-name').value.trim();
+        const catVal = document.getElementById('tk-category').value;
+        const yieldVal = parseFloat(document.getElementById('tk-yield').value) || 1;
+        const yieldUnitVal = document.getElementById('tk-yield-unit').value;
+        const notesVal = document.getElementById('tk-notes').value.trim();
+
+        const ingList = [];
+        tkIngList.querySelectorAll('.tk-ing-row').forEach(r => {
+          const iName = r.querySelector('.tk-ing-name').value.trim();
+          const iQty = parseFloat(r.querySelector('.tk-ing-qty').value);
+          const iUnit = r.querySelector('.tk-ing-unit').value;
+          if (iName && !isNaN(iQty) && iQty > 0) {
+            ingList.push({ name: iName, qty: iQty, unit: iUnit });
+          }
+        });
+
+        if (!nameVal || ingList.length === 0) {
+          showToast('Укажи название ТК и хотя бы 1 ингредиент', false);
+          return;
+        }
+
+        const recipeObj = {
+          id: editId || ('tk-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6)),
+          name: nameVal,
+          category: catVal,
+          baseYield: yieldVal,
+          yieldUnit: yieldUnitVal,
+          notes: notesVal,
+          ingredients: ingList
+        };
+
+        if (editId) {
+          recipes = recipes.map(r => r.id === editId ? recipeObj : r);
+        } else {
+          recipes.unshift(recipeObj);
+        }
+
+        saveToStorage(RECIPES_KEY, recipes);
+        tkForm.classList.add('hidden');
+        renderRecipes();
+        showToast(editId ? `ТК «${recipeObj.name}» обновлена` : `ТК «${recipeObj.name}» добавлена в базу`);
+
+        if (webhookUrl) {
+          const cloudPayload = {
+            type: 'recipe',
+            id: recipeObj.id,
+            name: recipeObj.name,
+            category: recipeObj.category,
+            baseYield: recipeObj.baseYield,
+            yieldUnit: recipeObj.yieldUnit,
+            notes: recipeObj.notes,
+            ingredients: recipeObj.ingredients,
+            // Совместимые поля на случай, если скрипт в таблице еще не обновлен:
+            date: recipeObj.category,
+            time: `${recipeObj.baseYield} ${recipeObj.yieldUnit}`,
+            product: recipeObj.name,
+            qty: 0,
+            unit: recipeObj.notes || '',
+            reason: RECIPE_REASON_TAG,
+            bartender: savedBartender || 'Бармен',
+            comment: JSON.stringify(recipeObj.ingredients)
+          };
+          try {
+            await fetch(webhookUrl, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify(cloudPayload)
+            });
+            setTimeout(() => syncFromCloud(false), 1200);
+          } catch (err) {
+            // ignore
+          }
+        }
+      });
+
+      async function deleteRecipeItem(id) {
+        markIdsDeleted([id]);
+        recipes = recipes.filter(r => r.id !== id);
+        saveToStorage(RECIPES_KEY, recipes);
+        renderRecipes();
+        showToast('ТК удалена из базы', false);
+
+        if (webhookUrl) {
+          try {
+            await fetch(webhookUrl, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({ action: 'delete', id: id })
+            });
+          } catch (err) {
+            // ignore
+          }
+        }
+      }
 
       // Render Preset Chips
       function renderPresets() {
@@ -1186,7 +1848,6 @@ if __name__ == "__main__":
         });
       });
 
-      // Classify Expiry Status: RED (<=2 days), YELLOW (3-4 days), GREEN (>=5 days)
       function getExpiryStatus(item) {
         const daysLeft = getDaysRemaining(item.expiryDate);
         if (daysLeft <= 2) {
@@ -1224,7 +1885,6 @@ if __name__ == "__main__":
         }
       }
 
-      // Render Expiry Items & Traffic Light Counters
       function renderExpiries() {
         const normalized = expiries.map(normalizeExpiry);
         normalized.sort((a, b) => getDaysRemaining(a.expiryDate) - getDaysRemaining(b.expiryDate));
@@ -1289,7 +1949,6 @@ if __name__ == "__main__":
             </div>
           `;
 
-          // Move expired/spoiled prep directly into Write-off form
           row.querySelector('.btn-exp-writeoff').addEventListener('click', () => {
             document.getElementById('input-product').value = item.product;
             setReason('Порча продукта');
@@ -1307,7 +1966,6 @@ if __name__ == "__main__":
         });
       }
 
-      // Filter by clicking Red / Yellow / Green cards
       document.querySelectorAll('.exp-filter-card').forEach(card => {
         card.addEventListener('click', () => {
           const code = card.dataset.expfilter;
@@ -1321,7 +1979,6 @@ if __name__ == "__main__":
         renderExpiries();
       });
 
-      // Add New Expiry Item Submit (упаковывается совместимо со стандартной Google Таблицей)
       document.getElementById('expiry-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const productVal = document.getElementById('exp-product').value.trim();
@@ -1353,7 +2010,6 @@ if __name__ == "__main__":
         renderExpiries();
         showToast(`Маркировка «${newExp.product}» добавлена до ${newExp.expiryDate}`);
 
-        // Отправляем в Google Таблицу в совместимом формате (чтобы работало со старым скриптом у всех сменщиков!)
         if (webhookUrl) {
           const cloudPayload = {
             type: 'expiry',
@@ -1405,7 +2061,6 @@ if __name__ == "__main__":
         }
       }
 
-      // Copy Expiry Summary for Telegram
       document.getElementById('btn-copy-exp-tg').addEventListener('click', () => {
         const normalized = expiries.map(normalizeExpiry);
         if (normalized.length === 0) {
@@ -1497,7 +2152,6 @@ if __name__ == "__main__":
         btn.addEventListener('click', () => setReason(btn.dataset.reason));
       });
 
-      // Reason Badge Helper
       function getReasonBadge(reason) {
         const badges = {
           'Порча продукта': 'bg-rose-500/15 text-rose-300 border-rose-500/30',
@@ -1551,7 +2205,6 @@ if __name__ == "__main__":
         entries.unshift(newEntry);
         saveToStorage(STORAGE_KEY, entries);
 
-        // Reset inputs
         document.getElementById('input-product').value = '';
         document.getElementById('input-qty').value = '';
         document.getElementById('input-comment').value = '';
@@ -1559,7 +2212,6 @@ if __name__ == "__main__":
         updateBadgeAndRecent();
         showToast(`Списано: ${newEntry.product} (${newEntry.qty} ${newEntry.unit})`);
 
-        // Push to Shared Google Sheets Cloud
         if (webhookUrl) {
           try {
             await fetch(webhookUrl, {
@@ -1633,7 +2285,6 @@ if __name__ == "__main__":
         });
       }
 
-      // Render Full History & Filters
       function getFilteredEntries() {
         const q = (document.getElementById('filter-search').value || '').toLowerCase().trim();
         const r = document.getElementById('filter-reason').value;
@@ -1655,7 +2306,6 @@ if __name__ == "__main__":
         const container = document.getElementById('history-container');
         container.innerHTML = '';
 
-        // Stats breakdown
         const counts = {
           'Порча продукта': 0,
           'Комплимент гостю': 0,
@@ -1725,7 +2375,7 @@ if __name__ == "__main__":
         renderHistory();
       });
 
-      // Clear All Confirmation (удаляет все списания и локально, и из общей Google Таблицы)
+      // Clear All Confirmation
       document.getElementById('btn-clear-all').addEventListener('click', () => {
         const validCount = entries.filter(isValidWriteOffRow).length;
         if (validCount === 0) {
@@ -1760,7 +2410,6 @@ if __name__ == "__main__":
         showToast(`Удаляем все записи (${idsToDelete.length} шт.) из Google Таблицы...`);
 
         try {
-          // 1) Команда массовой очистки (отправляется через action: 'delete', чтобы старый скрипт не создавал пустую строку!)
           await fetch(webhookUrl, {
             method: 'POST',
             mode: 'no-cors',
@@ -1768,7 +2417,6 @@ if __name__ == "__main__":
             body: JSON.stringify({ action: 'delete', id: '__CLEAR_WRITEOFFS__' })
           });
 
-          // 2) Поочередное удаление каждого ID из таблицы
           for (const id of idsToDelete) {
             await fetch(webhookUrl, {
               method: 'POST',
@@ -1891,6 +2539,7 @@ if __name__ == "__main__":
       // Init Page
       entries = entries.filter(item => isValidWriteOffRow(item) && !isDeletedId(item.id)).map(normalizeEntry);
       expiries = expiries.filter(item => !isDeletedId(item.id)).map(normalizeExpiry);
+      recipes = recipes.filter(item => !isDeletedId(item.id)).map(normalizeRecipe);
       document.getElementById('input-date').value = getTodayISO();
       document.getElementById('exp-made-date').value = getTodayISO();
       recalcExpiryDateFromDays();
@@ -1900,6 +2549,7 @@ if __name__ == "__main__":
       renderExpiryPresets();
       updateBadgeAndRecent();
       renderExpiries();
+      renderRecipes();
       if (webhookUrl) {
         syncFromCloud(false);
       }
