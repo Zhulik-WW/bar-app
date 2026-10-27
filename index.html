@@ -330,10 +330,11 @@
         <div class="p-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
           <div>
             <h3 class="text-sm sm:text-base font-bold text-white">Активные сроки и заготовки на баре</h3>
-            <p class="text-xs text-slate-400">Отсортировано от самых срочных к свежим</p>
+            <p class="text-xs text-slate-400">Общий список для всех сменщиков (от самых срочных к свежим)</p>
           </div>
           <div class="flex items-center gap-2">
-            <button type="button" id="btn-exp-show-all" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1.5 rounded-lg">Показать все</button>
+            <button type="button" id="btn-exp-refresh" class="text-xs bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 px-2.5 py-1.5 rounded-lg font-medium">🔄 Обновить</button>
+            <button type="button" id="btn-exp-show-all" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1.5 rounded-lg">Все</button>
             <button type="button" id="btn-copy-exp-tg" class="text-xs bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 px-2.5 py-1.5 rounded-lg font-medium">📋 Сводка в TG</button>
           </div>
         </div>
@@ -426,7 +427,7 @@
           <h2 class="text-base font-bold text-white">Общий журнал для всех сменщиков (2-сторонняя синхронизация)</h2>
         </div>
         <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-          Твоя ссылка на Google Таблицу уже вшита в код по умолчанию! Если захочешь, чтобы и вкладка <strong>«⏳ Сроки»</strong> тоже хранилась на отдельном листе в той же Google Таблице у всех сменщиков, можешь при случае обновить скрипт в таблице на версию ниже:
+          Твоя ссылка на Google Таблицу уже вшита в код по умолчанию! Теперь и <strong>Списания</strong>, и <strong>⏳ Сроки годности</strong> автоматически синхронизируются между всеми сменщиков прямо через твой текущий скрипт в Google Таблице (даже без его переустановки).
         </p>
 
         <div class="space-y-2 pt-1">
@@ -438,15 +439,14 @@
           <p id="webhook-status" class="text-[11px] text-slate-400"></p>
         </div>
 
-        <!-- Google Apps Script Code (Two-Way + Expiry Sheet) -->
+        <!-- Google Apps Script Code -->
         <div class="pt-2">
           <div class="flex items-center justify-between mb-1.5">
-            <span class="text-xs font-semibold text-slate-400">Двухсторонний код для Google Таблицы (Списания + Сроки):</span>
+            <span class="text-xs font-semibold text-slate-400">Двухсторонний код для Google Таблицы (Apps Script):</span>
             <button id="btn-copy-gas" class="text-xs text-amber-400 hover:text-amber-300 font-medium">Скопировать код</button>
           </div>
           <pre id="gas-code" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] text-emerald-300 overflow-x-auto custom-scrollbar">function doGet(e) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheets()[0];
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var rows = sheet.getDataRange().getDisplayValues();
   var result = [];
   for (var i = 1; i &lt; rows.length; i++) {
@@ -465,55 +465,16 @@
     });
   }
   result.reverse();
-
-  var expSheet = ss.getSheetByName("Сроки");
-  var expiries = [];
-  if (expSheet) {
-    var erows = expSheet.getDataRange().getDisplayValues();
-    for (var j = 1; j &lt; erows.length; j++) {
-      var er = erows[j];
-      if (!er[0] &amp;&amp; !er[1]) continue;
-      expiries.push({
-        id: String(er[0]),
-        product: String(er[1]),
-        madeDate: String(er[2]),
-        expiryDate: String(er[3]),
-        volume: String(er[4] || ""),
-        bartender: String(er[5] || "")
-      });
-    }
-  }
-  return ContentService.createTextOutput(JSON.stringify({ status: "ok", entries: result, expiries: expiries }))
+  return ContentService.createTextOutput(JSON.stringify({ status: "ok", entries: result }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
 function doPost(e) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var data = JSON.parse(e.postData.contents);
-
-  if (data.type === "expiry") {
-    var expSheet = ss.getSheetByName("Сроки") || ss.insertSheet("Сроки");
-    if (expSheet.getLastRow() === 0) {
-      expSheet.appendRow(["ID", "Заготовка", "Дата открытия", "Годен до", "Объем", "Бармен"]);
-    }
-    if (data.action === "delete" &amp;&amp; data.id) {
-      var erows = expSheet.getDataRange().getDisplayValues();
-      for (var k = erows.length - 1; k &gt;= 1; k--) {
-        if (String(erows[k][0]) === String(data.id)) {
-          expSheet.deleteRow(k + 1);
-          break;
-        }
-      }
-      return ContentService.createTextOutput(JSON.stringify({ status: "deleted_expiry" })).setMimeType(ContentService.MimeType.JSON);
-    }
-    expSheet.appendRow([data.id, data.product, "'" + data.madeDate, "'" + data.expiryDate, data.volume || "", data.bartender || ""]);
-    return ContentService.createTextOutput(JSON.stringify({ status: "added_expiry" })).setMimeType(ContentService.MimeType.JSON);
-  }
-
-  var sheet = ss.getSheets()[0];
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(["ID", "Дата", "Время", "Продукт", "Кол-во", "Ед.", "Причина", "Бармен", "Комментарий"]);
   }
+  var data = JSON.parse(e.postData.contents);
   if (data.action === "delete" &amp;&amp; data.id) {
     var rows = sheet.getDataRange().getDisplayValues();
     for (var i = rows.length - 1; i &gt;= 1; i--) {
@@ -522,7 +483,8 @@ function doPost(e) {
         break;
       }
     }
-    return ContentService.createTextOutput(JSON.stringify({ status: "deleted" })).setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({ status: "deleted" }))
+      .setMimeType(ContentService.MimeType.JSON);
   }
   sheet.appendRow([
     data.id,
@@ -535,7 +497,8 @@ function doPost(e) {
     data.bartender || "",
     data.comment || ""
   ]);
-  return ContentService.createTextOutput(JSON.stringify({ status: "added" })).setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify({ status: "added" }))
+    .setMimeType(ContentService.MimeType.JSON);
 }</pre>
         </div>
       </div>
@@ -618,9 +581,12 @@ if __name__ == "__main__":
       // Твоя ссылка на общую базу Google Таблицы вшита по умолчанию:
       const DEFAULT_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbzaV4pnLh9niTKkpv0X88-_nVEAvYcCvojfYWzPOA5lkNCVtOYqCgI6CHMghYg2Opl6/exec';
 
+      // Специальная метка, чтобы хранить сроки в той же Google Таблице и автоматически отделять их от списаний:
+      const EXPIRY_REASON_TAG = '__EXPIRY__';
+
       const STORAGE_KEY = 'bar_writeoffs_v1';
       const PRESETS_KEY = 'bar_presets_v1';
-      const EXPIRY_KEY = 'bar_expiries_v1';
+      const EXPIRY_KEY = 'bar_expiries_v2';
       const WEBHOOK_KEY = 'bar_webhook_v1';
       const BARTENDER_KEY = 'bar_bartender_name_v1';
 
@@ -707,6 +673,7 @@ if __name__ == "__main__":
       function formatShortDate(raw) {
         if (!raw) return '';
         let str = String(raw).trim();
+        if (str === 'undefined' || str === 'null') return '';
         const isoMatch = str.match(/(\d{4})-(\d{2})-(\d{2})/);
         if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
 
@@ -721,18 +688,38 @@ if __name__ == "__main__":
         if (engMatch) {
           return `${engMatch[3]}-${months[engMatch[1]]}-${engMatch[2].padStart(2, '0')}`;
         }
-        return str.slice(0, 10);
+        return '';
       }
 
       // Железная очистка времени от длинных строк типа "Sat Dec 30 1899 01:38:00 GMT+0202 (...)"
       function formatShortTime(raw) {
         if (!raw) return '';
         const str = String(raw).trim();
+        if (str === 'undefined' || str === 'null') return '';
         const match = str.match(/(\d{1,2}):(\d{2})/);
         if (match) {
           return match[1].padStart(2, '0') + ':' + match[2];
         }
         return '';
+      }
+
+      // Проверка: является ли строка из Google Таблицы записью о сроке годности (или старой сломанной строкой exp-)
+      function isExpiryRow(item) {
+        if (!item) return false;
+        const idStr = String(item.id || '');
+        const reasonStr = String(item.reason || '');
+        return reasonStr === EXPIRY_REASON_TAG || idStr.startsWith('exp-');
+      }
+
+      // Проверка: является ли запись настоящим валидным списанием (отсекает полупустые сломанные строки)
+      function isValidWriteOffRow(item) {
+        if (!item || isExpiryRow(item)) return false;
+        const reasonStr = String(item.reason || '').trim();
+        const qtyNum = Number(item.qty);
+        if (!reasonStr || reasonStr === 'undefined' || isNaN(qtyNum) || qtyNum <= 0) {
+          return false;
+        }
+        return true;
       }
 
       function normalizeEntry(item) {
@@ -743,10 +730,18 @@ if __name__ == "__main__":
       }
 
       function normalizeExpiry(item) {
-        return Object.assign({}, item, {
-          madeDate: formatShortDate(item.madeDate),
-          expiryDate: formatShortDate(item.expiryDate)
-        });
+        const made = formatShortDate(item.madeDate || item.date) || getTodayISO();
+        const until = formatShortDate(item.expiryDate || item.comment) || addDaysISO(made, 3);
+        const volRaw = item.volume !== undefined ? item.volume : item.unit;
+        const vol = (volRaw && String(volRaw) !== 'undefined') ? String(volRaw) : '';
+        return {
+          id: String(item.id),
+          product: String(item.product || ''),
+          madeDate: made,
+          expiryDate: until,
+          volume: vol,
+          bartender: String(item.bartender || '')
+        };
       }
 
       const sampleEntries = [
@@ -796,36 +791,9 @@ if __name__ == "__main__":
         }
       ];
 
-      const sampleExpiries = [
-        {
-          id: 'exp-1',
-          product: 'Пюре маракуйя (откр.)',
-          madeDate: addDaysISO(getTodayISO(), -4),
-          expiryDate: addDaysISO(getTodayISO(), 1),
-          volume: '1 бут',
-          bartender: 'Антон'
-        },
-        {
-          id: 'exp-2',
-          product: 'Альтернативное молоко (кокос)',
-          madeDate: addDaysISO(getTodayISO(), -1),
-          expiryDate: addDaysISO(getTodayISO(), 3),
-          volume: '1 л',
-          bartender: 'Антон'
-        },
-        {
-          id: 'exp-3',
-          product: 'Кордиал Лайм-Лемонграсс',
-          madeDate: getTodayISO(),
-          expiryDate: addDaysISO(getTodayISO(), 7),
-          volume: '700 мл',
-          bartender: 'Антон'
-        }
-      ];
-
-      let entries = loadFromStorage(STORAGE_KEY, sampleEntries);
+      let entries = loadFromStorage(STORAGE_KEY, sampleEntries).filter(isValidWriteOffRow);
       let presets = loadFromStorage(PRESETS_KEY, defaultPresets);
-      let expiries = loadFromStorage(EXPIRY_KEY, sampleExpiries);
+      let expiries = loadFromStorage(EXPIRY_KEY, []);
       let webhookUrl = loadFromStorage(WEBHOOK_KEY, '') || DEFAULT_CLOUD_URL;
       let savedBartender = loadFromStorage(BARTENDER_KEY, '');
 
@@ -880,7 +848,7 @@ if __name__ == "__main__":
           : 'text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-medium';
       }
 
-      // Fetch shared entries & expiries from Google Sheets (GET)
+      // Загрузка из Google Таблицы и умное разделение на "Журнал списаний" и "Сроки годности"
       async function syncFromCloud(showNotification = false) {
         if (!webhookUrl) {
           updateSyncBadge('Локально', false);
@@ -891,18 +859,38 @@ if __name__ == "__main__":
           const res = await fetch(webhookUrl + '?t=' + Date.now());
           const data = await res.json();
           if (data && Array.isArray(data.entries)) {
-            entries = data.entries.map(normalizeEntry);
+            const cloudWriteOffs = [];
+            const cloudExpiries = [];
+
+            data.entries.forEach(rawRow => {
+              if (String(rawRow.reason || '') === EXPIRY_REASON_TAG) {
+                cloudExpiries.push(normalizeExpiry(rawRow));
+              } else if (isValidWriteOffRow(rawRow)) {
+                cloudWriteOffs.push(normalizeEntry(rawRow));
+              }
+              // Старые сломанные строки (где id начинается с exp- и нет даты) просто игнорируются!
+            });
+
+            // Если в таблице также есть отдельный массив data.expiries, объединим без дублей
+            if (Array.isArray(data.expiries)) {
+              const seenIds = new Set(cloudExpiries.map(x => x.id));
+              data.expiries.forEach(ex => {
+                if (!seenIds.has(String(ex.id))) {
+                  cloudExpiries.push(normalizeExpiry(ex));
+                }
+              });
+            }
+
+            entries = cloudWriteOffs;
+            expiries = cloudExpiries;
             saveToStorage(STORAGE_KEY, entries);
-          }
-          if (data && Array.isArray(data.expiries)) {
-            expiries = data.expiries.map(normalizeExpiry);
             saveToStorage(EXPIRY_KEY, expiries);
           }
           updateBadgeAndRecent();
           renderHistory();
           renderExpiries();
           updateSyncBadge('Общий журнал ✓', true);
-          if (showNotification) showToast('Общий журнал обновлен!');
+          if (showNotification) showToast('Общие списания и сроки обновлены!');
         } catch (err) {
           updateSyncBadge('Облако подключено', true);
           if (showNotification) showToast('Не удалось загрузить список (проверь доступ Все / Anyone)', false);
@@ -963,6 +951,7 @@ if __name__ == "__main__":
           viewExpiry.classList.remove('hidden');
           tabExpiry.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-amber-500 text-slate-950 shadow-sm flex items-center gap-1 whitespace-nowrap';
           renderExpiries();
+          if (webhookUrl) syncFromCloud(false);
         } else if (tab === 'history') {
           viewHistory.classList.remove('hidden');
           tabHistory.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-amber-500 text-slate-950 shadow-sm flex items-center gap-1 whitespace-nowrap';
@@ -981,6 +970,7 @@ if __name__ == "__main__":
       document.getElementById('btn-goto-history').addEventListener('click', () => switchTab('history'));
       document.getElementById('btn-refresh-recent').addEventListener('click', () => syncFromCloud(true));
       document.getElementById('btn-refresh-cloud').addEventListener('click', () => syncFromCloud(true));
+      document.getElementById('btn-exp-refresh').addEventListener('click', () => syncFromCloud(true));
 
       // Render Preset Chips
       function renderPresets() {
@@ -1133,7 +1123,7 @@ if __name__ == "__main__":
         container.innerHTML = '';
 
         if (filtered.length === 0) {
-          container.innerHTML = `<div class="p-8 text-center text-sm text-slate-500">Заготовок в этой категории нет</div>`;
+          container.innerHTML = `<div class="p-8 text-center text-sm text-slate-500">Активных заготовок пока нет. Добавь первую маркировку выше!</div>`;
           return;
         }
 
@@ -1196,7 +1186,7 @@ if __name__ == "__main__":
         renderExpiries();
       });
 
-      // Add New Expiry Item Submit
+      // Add New Expiry Item Submit (упаковывается совместимо со стандартной Google Таблицей)
       document.getElementById('expiry-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const productVal = document.getElementById('exp-product').value.trim();
@@ -1228,14 +1218,27 @@ if __name__ == "__main__":
         renderExpiries();
         showToast(`Маркировка «${newExp.product}» добавлена до ${newExp.expiryDate}`);
 
+        // Отправляем в Google Таблицу в совместимом формате (чтобы работало со старым скриптом у всех сменщиков!)
         if (webhookUrl) {
+          const cloudPayload = {
+            id: newExp.id,
+            date: newExp.madeDate,
+            time: getNowTime(),
+            product: newExp.product,
+            qty: 0,
+            unit: newExp.volume || '',
+            reason: EXPIRY_REASON_TAG,
+            bartender: newExp.bartender,
+            comment: newExp.expiryDate
+          };
           try {
             await fetch(webhookUrl, {
               method: 'POST',
               mode: 'no-cors',
               headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-              body: JSON.stringify(Object.assign({ type: 'expiry' }, newExp))
+              body: JSON.stringify(cloudPayload)
             });
+            setTimeout(() => syncFromCloud(false), 1200);
           } catch (err) {
             // ignore
           }
@@ -1254,7 +1257,7 @@ if __name__ == "__main__":
               method: 'POST',
               mode: 'no-cors',
               headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-              body: JSON.stringify({ type: 'expiry', action: 'delete', id: id })
+              body: JSON.stringify({ action: 'delete', id: id })
             });
           } catch (err) {
             // ignore
@@ -1454,11 +1457,12 @@ if __name__ == "__main__":
       }
 
       function updateBadgeAndRecent() {
-        document.getElementById('badge-count').textContent = entries.length;
+        const validEntries = entries.filter(isValidWriteOffRow);
+        document.getElementById('badge-count').textContent = validEntries.length;
         const recentContainer = document.getElementById('recent-list');
         recentContainer.innerHTML = '';
 
-        const slice = entries.slice(0, 4);
+        const slice = validEntries.slice(0, 4);
         if (slice.length === 0) {
           recentContainer.innerHTML = `<div class="text-xs text-slate-500 py-3 text-center">Записей пока нет. Добавь первое списание выше!</div>`;
           return;
@@ -1494,7 +1498,7 @@ if __name__ == "__main__":
         const r = document.getElementById('filter-reason').value;
         const d = document.getElementById('filter-date').value;
 
-        return entries.map(normalizeEntry).filter(item => {
+        return entries.filter(isValidWriteOffRow).map(normalizeEntry).filter(item => {
           const matchQ = !q ||
             (item.product && item.product.toLowerCase().includes(q)) ||
             (item.comment && item.comment.toLowerCase().includes(q)) ||
@@ -1699,7 +1703,7 @@ if __name__ == "__main__":
       });
 
       // Init Page
-      entries = entries.map(normalizeEntry);
+      entries = entries.filter(isValidWriteOffRow).map(normalizeEntry);
       expiries = expiries.map(normalizeExpiry);
       document.getElementById('input-date').value = getTodayISO();
       document.getElementById('exp-made-date').value = getTodayISO();
