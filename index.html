@@ -664,7 +664,7 @@
           <h2 class="text-base font-bold text-white">Общий журнал для всех сменщиков (2-сторонняя синхронизация)</h2>
         </div>
         <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-          Твоя ссылка на Google Таблицу вшита по умолчанию! <strong>Списания</strong> и <strong>⏳ Сроки годности</strong> ведутся на первом листе в разных столбиках, а для <strong>📖 ТК (Техкарт)</strong> скрипт автоматически создаёт отдельную вкладку <strong>«ТК»</strong> внизу твоей Google Таблицы.
+          Твоя ссылка на Google Таблицу вшита по умолчанию! <strong>Списания</strong> и <strong>⏳ Сроки годности</strong> ведутся на первом листе в разных столбиках, а для <strong>📖 ТК (Техкарт)</strong> скрипт автоматически ведёт отдельную вкладку <strong>«ТК»</strong> внизу твоей Google Таблицы.
         </p>
 
         <div class="space-y-2 pt-1">
@@ -761,23 +761,25 @@ function doGet(e) {
   for (var j = 1; j < tkRows.length; j++) {
     var tr = tkRows[j];
     if (tr[0] || tr[1]) {
-      var parsed = null;
+      var parsedIngs = [];
       if (tr[7]) {
-        try { parsed = JSON.parse(tr[7]); } catch (err) {}
+        try {
+          var parsedJson = JSON.parse(tr[7]);
+          if (Array.isArray(parsedJson)) parsedIngs = parsedJson;
+          else if (parsedJson && Array.isArray(parsedJson.ingredients)) parsedIngs = parsedJson.ingredients;
+        } catch (err) {}
       }
-      if (parsed && parsed.id) {
-        recipes.push(parsed);
-      } else {
-        recipes.push({
-          id: String(tr[0]),
-          name: String(tr[1]),
-          category: String(tr[2] || "Коктейли"),
-          yieldQty: Number(String(tr[3]).replace(",", ".")) || 1,
-          yieldUnit: String(tr[4] || "порц"),
-          ingredientsText: String(tr[5] || ""),
-          note: String(tr[6] || "")
-        });
-      }
+      recipes.push({
+        id: String(tr[0]),
+        name: String(tr[1]),
+        category: String(tr[2] || "Коктейли"),
+        yieldQty: Number(String(tr[3]).replace(",", ".")) || 1,
+        yieldUnit: String(tr[4] || "порц"),
+        ingredientsText: String(tr[5] || ""),
+        method: String(tr[6] || ""),
+        note: String(tr[6] || ""),
+        ingredients: parsedIngs
+      });
     }
   }
 
@@ -834,10 +836,12 @@ function doPost(e) {
 
   // Сохранение или обновление Техкарты на отдельной вкладке «ТК»
   if (data.type === "recipe" || data.reason === "__RECIPE__") {
-    var rec = data.recipe || {};
-    var ingSummary = (rec.ingredients || []).map(function(ing) {
-      return ing.name + ": " + ing.qty + " " + ing.unit;
-    }).join(", ");
+    var rec = data.recipe || data;
+    var ings = Array.isArray(data.ingredients) ? data.ingredients : (rec.ingredients || []);
+    var ingSummary = ings.map(function(ing) {
+      return ing.name + " — " + ing.qty + " " + ing.unit;
+    }).join(" | ");
+    var methodStr = data.method || data.note || rec.note || rec.method || "";
     var tkData = tkSheet.getDataRange().getDisplayValues();
     var targetTkRow = -1;
     for (var m = 1; m < tkData.length; m++) {
@@ -849,13 +853,13 @@ function doPost(e) {
     if (targetTkRow === -1) targetTkRow = tkSheet.getLastRow() + 1;
     tkSheet.getRange(targetTkRow, 1, 1, 8).setValues([[
       data.id,
-      rec.name || data.product || "",
-      rec.category || "Коктейли",
-      rec.yieldQty || 1,
-      rec.yieldUnit || "порц",
+      data.name || rec.name || data.product || "",
+      data.category || rec.category || "Коктейли",
+      data.yieldQty || rec.yieldQty || 1,
+      data.yieldUnit || rec.yieldUnit || "порц",
       ingSummary,
-      rec.note || "",
-      JSON.stringify(rec)
+      methodStr,
+      JSON.stringify(ings)
     ]]);
     return ContentService.createTextOutput(JSON.stringify({ status: "recipe_saved" }))
       .setMimeType(ContentService.MimeType.JSON);
@@ -1225,22 +1229,72 @@ if __name__ == "__main__":
         };
       }
 
+      // Парсер текстового состава из колонки F ("Пюре маракуя — 60 мл | Сироп — 30 мл"), если JSON пуст
+      function parseIngredientsFromText(text) {
+        if (!text || typeof text !== 'string') return [];
+        const parts = text.split(/\s*\|\s*|\s*;\s*/);
+        const res = [];
+        parts.forEach(part => {
+          const clean = part.trim();
+          if (!clean) return;
+          const m = clean.match(/^(.+?)\s*[—\-:]\s*([\d.,]+)\s*(.*)$/);
+          if (m) {
+            const name = m[1].trim();
+            const qty = parseFloat(m[2].replace(',', '.')) || 0;
+            const unit = (m[3] || 'мл').trim() || 'мл';
+            if (name && qty > 0) {
+              res.push({ name, qty, unit });
+            }
+          }
+        });
+        return res;
+      }
+
+      // Умная нормализация ТК: понимает и поле method (из колонки G таблицы), и note, и текстовый состав из колонки F
       function normalizeRecipe(item) {
         if (!item) return null;
         if (item.comment && String(item.reason) === RECIPE_REASON_TAG) {
           try {
             const parsed = JSON.parse(item.comment);
-            if (parsed && parsed.name) return parsed;
+            if (parsed && parsed.name) {
+              return {
+                id: String(parsed.id || item.id || 'tk-' + Date.now()),
+                name: String(parsed.name || item.name || 'Без названия'),
+                category: String(parsed.category || item.category || 'Коктейли'),
+                yieldQty: Number(parsed.yieldQty || item.yieldQty || 1),
+                yieldUnit: String(parsed.yieldUnit || item.yieldUnit || 'порц'),
+                ingredients: Array.isArray(parsed.ingredients) ? parsed.ingredients : [],
+                note: String(parsed.note || parsed.method || item.method || item.note || '')
+              };
+            }
           } catch (e) {}
         }
+
+        let ings = [];
+        if (Array.isArray(item.ingredients) && item.ingredients.length > 0) {
+          ings = item.ingredients;
+        } else if (typeof item.ingredients === 'string' && item.ingredients.trim().startsWith('[')) {
+          try {
+            const p = JSON.parse(item.ingredients);
+            if (Array.isArray(p)) ings = p;
+          } catch (e) {}
+        }
+        if (ings.length === 0 && (item.ingredientsText || item.composition)) {
+          ings = parseIngredientsFromText(item.ingredientsText || item.composition);
+        }
+
+        const rawNote = item.note || item.method || item.description || '';
+        const cleanNote = (rawNote && String(rawNote) !== 'undefined') ? String(rawNote).trim() : '';
+
         return {
           id: String(item.id || 'tk-' + Date.now()),
           name: String(item.name || item.product || 'Без названия'),
           category: String(item.category || 'Коктейли'),
-          yieldQty: Number(item.yieldQty || item.qty || 1),
+          yieldQty: Number(String(item.yieldQty || item.qty || 1).replace(',', '.')) || 1,
           yieldUnit: String(item.yieldUnit || item.unit || 'порц'),
-          ingredients: Array.isArray(item.ingredients) ? item.ingredients : [],
-          note: String(item.note || '')
+          ingredients: ings,
+          note: cleanNote,
+          method: cleanNote
         };
       }
 
@@ -1310,7 +1364,7 @@ if __name__ == "__main__":
       let entries = loadFromStorage(STORAGE_KEY, sampleEntries).filter(item => isValidWriteOffRow(item) && !isDeletedId(item.id));
       let presets = loadFromStorage(PRESETS_KEY, defaultPresets);
       let expiries = loadFromStorage(EXPIRY_KEY, []).filter(item => !isDeletedId(item.id));
-      let recipes = loadFromStorage(TK_STORAGE_KEY, defaultRecipes).filter(item => item && !isDeletedId(item.id));
+      let recipes = loadFromStorage(TK_STORAGE_KEY, defaultRecipes).map(normalizeRecipe).filter(item => item && !isDeletedId(item.id));
       let webhookUrl = loadFromStorage(WEBHOOK_KEY, '') || DEFAULT_CLOUD_URL;
       let savedBartender = loadFromStorage(BARTENDER_KEY, '');
 
@@ -1369,6 +1423,45 @@ if __name__ == "__main__":
 
       let isClearingCloud = false;
 
+      // Отправка ТК в облако на верхнем уровне JSON, чтобы скрипт таблицы записывал и Состав (F), и Метод (G), и JSON (H)
+      async function pushRecipeToCloud(recipeObj) {
+        if (!webhookUrl || !recipeObj) return;
+        const ingText = (recipeObj.ingredients || []).map(i => `${i.name} — ${i.qty} ${i.unit}`).join(' | ');
+        const payload = {
+          type: 'recipe',
+          action: 'save_recipe',
+          id: recipeObj.id,
+          name: recipeObj.name,
+          product: recipeObj.name,
+          category: recipeObj.category || 'Коктейли',
+          yieldQty: recipeObj.yieldQty || 1,
+          qty: recipeObj.yieldQty || 1,
+          yieldUnit: recipeObj.yieldUnit || 'порц',
+          unit: recipeObj.yieldUnit || 'порц',
+          ingredients: recipeObj.ingredients || [],
+          ingredientsText: ingText,
+          method: recipeObj.note || '',
+          note: recipeObj.note || '',
+          description: recipeObj.note || '',
+          date: getTodayISO(),
+          time: getNowTime(),
+          reason: RECIPE_REASON_TAG,
+          bartender: savedBartender || 'Бармен',
+          comment: JSON.stringify(recipeObj),
+          recipe: recipeObj
+        };
+        try {
+          await fetch(webhookUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+          });
+        } catch (err) {
+          // ignore
+        }
+      }
+
       // Загрузка из Google Таблицы (Списания + Сроки + вкладка ТК)
       async function syncFromCloud(showNotification = false) {
         if (isClearingCloud) return;
@@ -1410,9 +1503,22 @@ if __name__ == "__main__":
               const seenTkIds = new Set(cloudRecipes.map(x => x.id));
               data.recipes.forEach(tk => {
                 const norm = normalizeRecipe(tk);
-                if (norm && !isDeletedId(norm.id) && !seenTkIds.has(String(norm.id))) {
-                  cloudRecipes.push(norm);
-                  seenTkIds.add(String(norm.id));
+                if (norm && !isDeletedId(norm.id)) {
+                  // Если в локальной памяти у этой же ТК есть полный состав/описание, а из таблицы пришел пустой [], сохраняем полный вариант!
+                  const localMatch = recipes.find(loc => String(loc.id) === String(norm.id));
+                  if (localMatch) {
+                    if ((!norm.ingredients || norm.ingredients.length === 0) && localMatch.ingredients && localMatch.ingredients.length > 0) {
+                      norm.ingredients = localMatch.ingredients;
+                    }
+                    if (!norm.note && localMatch.note) {
+                      norm.note = localMatch.note;
+                      norm.method = localMatch.note;
+                    }
+                  }
+                  if (!seenTkIds.has(String(norm.id))) {
+                    cloudRecipes.push(norm);
+                    seenTkIds.add(String(norm.id));
+                  }
                 }
               });
             }
@@ -1618,12 +1724,8 @@ if __name__ == "__main__":
         if (calcMode === 'TARGET') {
           calcInputLabel.textContent = `Желаемый выход (${rec.name}):`;
           calcUnitBadge.textContent = baseUnit;
-          if (!keepCurrentMultiplier) {
-            calcInputVal.value = baseYield;
-          } else {
-            calcInputVal.value = baseYield;
-          }
-          // Подстраиваем быстрые кнопки под единицу измерения (мл/г или порц/л/шт)
+          calcInputVal.value = baseYield;
+
           if (baseUnit === 'мл' || baseUnit === 'г') {
             calcQuickVol.innerHTML = `
               <button type="button" data-targetvol="250" class="calc-vol-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-lg">250 ${escapeHtml(baseUnit)}</button>
@@ -1713,6 +1815,7 @@ if __name__ == "__main__":
           return;
         }
 
+        const descText = comp.recipe.note || comp.recipe.method || '';
         const ingRowsHtml = comp.scaledIngredients.map(ing => `
           <div class="flex items-center justify-between py-2 border-b border-slate-800/70 last:border-0 text-xs sm:text-sm">
             <div class="text-slate-200 font-medium">${escapeHtml(ing.name)}</div>
@@ -1741,9 +1844,9 @@ if __name__ == "__main__":
             </div>
           </div>
           <div class="divide-y divide-slate-800/60">
-            ${ingRowsHtml}
+            ${ingRowsHtml || `<div class="text-xs text-slate-500 py-2">Состав пока пуст — нажми «✏️ Изм.» на карточке ТК, чтобы добавить ингредиенты</div>`}
           </div>
-          ${comp.recipe.note ? `<div class="text-[11px] text-slate-400 bg-slate-950/70 p-2.5 rounded-lg border border-slate-800/80">💡 ${escapeHtml(comp.recipe.note)}</div>` : ''}
+          ${descText ? `<div class="text-[11px] text-slate-300 bg-slate-950/70 p-2.5 rounded-lg border border-slate-800/80">💡 ${escapeHtml(descText)}</div>` : ''}
         `;
       }
 
@@ -1763,10 +1866,10 @@ if __name__ == "__main__":
         tkCalcBox.classList.add('hidden');
       });
 
-      // Скопировать пересчитанный рецепт в Telegram
       document.getElementById('btn-calc-copy-tg').addEventListener('click', () => {
         const comp = getCalcComputation();
         if (!comp) return;
+        const descText = comp.recipe.note || comp.recipe.method || '';
         let lines = [
           `🧮 РАСЧЕТ ПО ТК: ${comp.recipe.name}`,
           `⚖️ Целевой выход: ${formatHumanQtyAndUnit(comp.finalYield, comp.yieldUnit)} (×${comp.factor} от базы ${comp.baseYield} ${comp.yieldUnit})`,
@@ -1776,13 +1879,12 @@ if __name__ == "__main__":
         comp.scaledIngredients.forEach(ing => {
           lines.push(`• ${ing.name} — ${formatHumanQtyAndUnit(ing.scaledQty, ing.unit)}`);
         });
-        if (comp.recipe.note) {
-          lines.push('', `💡 Метод: ${comp.recipe.note}`);
+        if (descText) {
+          lines.push('', `💡 Метод: ${descText}`);
         }
         copyTextToClipboard(lines.join('\n'), `Расчет «${comp.recipe.name}» скопирован!`);
       });
 
-      // Отправить рассчитанную партию заготовки прямо в «⏳ Сроки»
       document.getElementById('btn-calc-to-expiry').addEventListener('click', () => {
         const comp = getCalcComputation();
         if (!comp) return;
@@ -1796,7 +1898,6 @@ if __name__ == "__main__":
       function openCalculatorForRecipe(recipeId) {
         tkCalcBox.classList.remove('hidden');
         populateCalcSelect(recipeId);
-        // Если это коктейль в порциях — удобнее сразу включить режим порций, если заготовка в мл/г — режим объема
         const rec = recipes.find(r => String(r.id) === String(recipeId));
         if (rec && (rec.yieldUnit === 'порц' || rec.yieldUnit === 'шт')) {
           setCalcMode('MULT');
@@ -1860,11 +1961,13 @@ if __name__ == "__main__":
         document.getElementById('tk-category').value = recipe.category || 'Коктейли';
         document.getElementById('tk-yield-qty').value = recipe.yieldQty || 1;
         document.getElementById('tk-yield-unit').value = recipe.yieldUnit || 'порц';
-        document.getElementById('tk-note').value = recipe.note || '';
+        document.getElementById('tk-note').value = recipe.note || recipe.method || '';
         tkIngList.innerHTML = '';
         if (Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0) {
           recipe.ingredients.forEach(ing => addIngredientRow(ing.name, ing.qty, ing.unit));
         } else {
+          addIngredientRow('', '', 'мл');
+          addIngredientRow('', '', 'мл');
           addIngredientRow('', '', 'мл');
         }
         tkForm.classList.remove('hidden');
@@ -1887,7 +1990,6 @@ if __name__ == "__main__":
         addIngredientRow('', '', 'мл');
       });
 
-      // Category Filter Click
       document.querySelectorAll('.tk-cat-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           activeTkCategory = btn.dataset.tkcat;
@@ -1937,10 +2039,11 @@ if __name__ == "__main__":
           yieldQty,
           yieldUnit,
           ingredients,
-          note
+          note,
+          method: note
         };
 
-        const existingIdx = recipes.findIndex(x => x.id === recipeObj.id);
+        const existingIdx = recipes.findIndex(x => String(x.id) === String(recipeObj.id));
         if (existingIdx >= 0) {
           recipes[existingIdx] = recipeObj;
         } else {
@@ -1953,35 +2056,12 @@ if __name__ == "__main__":
         populateCalcSelect(recipeObj.id);
         showToast(`Техкарта «${recipeObj.name}» сохранена!`);
 
-        if (webhookUrl) {
-          try {
-            await fetch(webhookUrl, {
-              method: 'POST',
-              mode: 'no-cors',
-              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-              body: JSON.stringify({
-                type: 'recipe',
-                id: recipeObj.id,
-                date: getTodayISO(),
-                time: getNowTime(),
-                product: recipeObj.name,
-                qty: recipeObj.yieldQty,
-                unit: recipeObj.yieldUnit,
-                reason: RECIPE_REASON_TAG,
-                bartender: savedBartender || 'Бармен',
-                comment: JSON.stringify(recipeObj),
-                recipe: recipeObj
-              })
-            });
-          } catch (err) {
-            // ignore
-          }
-        }
+        await pushRecipeToCloud(recipeObj);
       });
 
       async function deleteRecipe(id) {
         markIdsDeleted([id]);
-        recipes = recipes.filter(r => r.id !== id);
+        recipes = recipes.filter(r => String(r.id) !== String(id));
         saveToStorage(TK_STORAGE_KEY, recipes);
         renderTechCards();
         populateCalcSelect();
@@ -2023,9 +2103,10 @@ if __name__ == "__main__":
         const q = (document.getElementById('tk-search-input').value || '').toLowerCase().trim();
         const filtered = recipes.filter(r => {
           const matchCat = activeTkCategory === 'ALL' || r.category === activeTkCategory;
+          const descStr = (r.note || r.method || '').toLowerCase();
           const matchSearch = !q ||
             (r.name && r.name.toLowerCase().includes(q)) ||
-            (r.note && r.note.toLowerCase().includes(q)) ||
+            descStr.includes(q) ||
             (Array.isArray(r.ingredients) && r.ingredients.some(i => i.name && i.name.toLowerCase().includes(q)));
           return matchCat && matchSearch;
         });
@@ -2042,6 +2123,7 @@ if __name__ == "__main__":
           const card = document.createElement('div');
           card.className = 'bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-4 shadow-lg flex flex-col justify-between space-y-3 transition-all';
 
+          const descText = recipe.note || recipe.method || '';
           const ingListHtml = (recipe.ingredients || []).map(ing => `
             <li class="flex items-center justify-between text-xs py-1 border-b border-slate-800/70 last:border-0">
               <span class="text-slate-200 font-medium">${escapeHtml(ing.name)}</span>
@@ -2064,10 +2146,10 @@ if __name__ == "__main__":
               </div>
 
               <ul class="bg-slate-950/60 border border-slate-800/80 rounded-xl px-3 py-2">
-                ${ingListHtml || `<li class="text-xs text-slate-500">Состав не указан</li>`}
+                ${ingListHtml || `<li class="text-xs text-slate-500">Состав не указан (нажми «✏️ Изм.», чтобы дополнить)</li>`}
               </ul>
 
-              ${recipe.note ? `<p class="text-xs text-slate-400 leading-relaxed bg-slate-800/40 px-3 py-2 rounded-xl border border-slate-800">💡 ${escapeHtml(recipe.note)}</p>` : ''}
+              ${descText ? `<p class="text-xs text-slate-300 leading-relaxed bg-slate-800/50 px-3 py-2 rounded-xl border border-slate-700/80">💡 ${escapeHtml(descText)}</p>` : ''}
             </div>
 
             <div class="flex items-center justify-between gap-1.5 pt-2 border-t border-slate-800/80 flex-wrap">
@@ -2102,8 +2184,8 @@ if __name__ == "__main__":
             (recipe.ingredients || []).forEach(i => {
               lines.push(`• ${i.name} — ${i.qty} ${i.unit}`);
             });
-            if (recipe.note) {
-              lines.push('', `💡 Метод/подача: ${recipe.note}`);
+            if (descText) {
+              lines.push('', `💡 Метод/подача: ${descText}`);
             }
             copyTextToClipboard(lines.join('\n'), `ТК «${recipe.name}» скопирована!`);
           });
@@ -2194,7 +2276,6 @@ if __name__ == "__main__":
         });
       });
 
-      // Classify Expiry Status: RED (<=2 days), YELLOW (3-4 days), GREEN (>=5 days)
       function getExpiryStatus(item) {
         const daysLeft = getDaysRemaining(item.expiryDate);
         if (daysLeft <= 2) {
@@ -2232,7 +2313,6 @@ if __name__ == "__main__":
         }
       }
 
-      // Render Expiry Items & Traffic Light Counters
       function renderExpiries() {
         const normalized = expiries.map(normalizeExpiry);
         normalized.sort((a, b) => getDaysRemaining(a.expiryDate) - getDaysRemaining(b.expiryDate));
@@ -2425,7 +2505,6 @@ if __name__ == "__main__":
         copyTextToClipboard(lines.join('\n'), 'Сводка по срокам скопирована для Telegram!');
       });
 
-      // Toggle Custom Preset Box
       document.getElementById('btn-toggle-preset-add').addEventListener('click', () => {
         const box = document.getElementById('custom-preset-box');
         box.classList.toggle('hidden');
@@ -2444,7 +2523,6 @@ if __name__ == "__main__":
         showToast(`Кнопка «${name}» добавлена`);
       });
 
-      // Unit Selection
       function setUnit(unit) {
         selectedUnit = unit;
         document.querySelectorAll('.unit-btn').forEach(btn => {
@@ -2460,7 +2538,6 @@ if __name__ == "__main__":
         btn.addEventListener('click', () => setUnit(btn.dataset.unit));
       });
 
-      // Quick Qty Buttons
       document.querySelectorAll('.quick-qty-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const input = document.getElementById('input-qty');
@@ -2474,7 +2551,6 @@ if __name__ == "__main__":
         document.getElementById('input-qty').value = '';
       });
 
-      // Reason Selection
       const reasonStyleMap = {
         'Порча продукта': 'bg-rose-500/20 border-rose-500 text-white',
         'Комплимент гостю': 'bg-amber-500/20 border-amber-500 text-white',
