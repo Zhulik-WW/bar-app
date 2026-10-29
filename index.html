@@ -841,7 +841,7 @@ function doPost(e) {
     var ingSummary = ings.map(function(ing) {
       return ing.name + " — " + ing.qty + " " + ing.unit;
     }).join(" | ");
-    var methodStr = data.method || data.note || rec.note || rec.method || "";
+    var methodStr = data.method || data.note || data.notes || data.description || rec.note || rec.method || "";
     var tkData = tkSheet.getDataRange().getDisplayValues();
     var targetTkRow = -1;
     for (var m = 1; m < tkData.length; m++) {
@@ -981,7 +981,7 @@ if __name__ == "__main__":
   <script>
     (function() {
       // Твоя ссылка на общую базу Google Таблицы вшита по умолчанию:
-      const DEFAULT_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbxXq9GaJvUxNol66_FTGMJR3HbWbcvVekCrYalcSEjXsphcFBICs9GKZsrYwzsy6AxyxQ/exec';
+      const DEFAULT_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbwIZgA1fL4iFdM51IKjA2ci3zmsfsdLHQFZCafPGe5lOTGD0Ng-omK08lyj40VHP3fKGQ/exec';
 
       // Специальные метки для обратной совместимости со старым скриптом таблицы:
       const EXPIRY_REASON_TAG = '__EXPIRY__';
@@ -994,6 +994,9 @@ if __name__ == "__main__":
       const WEBHOOK_KEY = 'bar_webhook_v1';
       const BARTENDER_KEY = 'bar_bartender_name_v1';
       const DELETED_IDS_KEY = 'bar_deleted_ids_v1';
+
+      // Динамический список ключей описания, которые возвращает скрипт таблицы
+      let detectedCloudTkKeys = [];
 
       const defaultPresets = [
         { name: 'Лайм', unit: 'г' },
@@ -1021,7 +1024,6 @@ if __name__ == "__main__":
         { name: 'Вермут открытый', days: 30, volume: '750 мл' }
       ];
 
-      // Стартовые примеры ТК для удобного тестирования базы и калькулятора
       const defaultRecipes = [
         {
           id: 'tk-sample-1',
@@ -1098,7 +1100,6 @@ if __name__ == "__main__":
         }
       ];
 
-      // Текущая дата по Киеву (ГГГГ-ММ-ДД)
       function getTodayISO() {
         try {
           return new Intl.DateTimeFormat('sv-SE', {
@@ -1113,7 +1114,6 @@ if __name__ == "__main__":
         }
       }
 
-      // Прибавить N дней к дате YYYY-MM-DD
       function addDaysISO(dateISO, days) {
         const parts = String(dateISO || getTodayISO()).split('-');
         const dt = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
@@ -1124,7 +1124,6 @@ if __name__ == "__main__":
         return `${yyyy}-${mm}-${dd}`;
       }
 
-      // Разница в днях между expiryDate и сегодняшней датой по Киеву
       function getDaysRemaining(expiryISO) {
         const cleanExp = formatShortDate(expiryISO);
         const cleanToday = getTodayISO();
@@ -1136,7 +1135,6 @@ if __name__ == "__main__":
         return Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
       }
 
-      // Текущее время по Киеву (ЧЧ:ММ)
       function getNowTime() {
         try {
           return new Intl.DateTimeFormat('ru-RU', {
@@ -1229,7 +1227,6 @@ if __name__ == "__main__":
         };
       }
 
-      // Парсер текстового состава из колонки F ("Пюре маракуя — 60 мл | Сироп — 30 мл"), если JSON пуст
       function parseIngredientsFromText(text) {
         if (!text || typeof text !== 'string') return [];
         const parts = text.split(/\s*\|\s*|\s*;\s*/);
@@ -1250,10 +1247,10 @@ if __name__ == "__main__":
         return res;
       }
 
-      // Умная нормализация ТК: понимает и поле method (из колонки G таблицы), и note, и текстовый состав из колонки F
+      // Умная нормализация ТК: ищет описание во всех возможных полях (включая любые кастомные ключи из таблицы)
       function normalizeRecipe(item) {
         if (!item) return null;
-        if (item.comment && String(item.reason) === RECIPE_REASON_TAG) {
+        if (item.comment && String(item.reason) === RECIPE_REASON_TAG && String(item.comment).trim().startsWith('{')) {
           try {
             const parsed = JSON.parse(item.comment);
             if (parsed && parsed.name) {
@@ -1264,7 +1261,7 @@ if __name__ == "__main__":
                 yieldQty: Number(parsed.yieldQty || item.yieldQty || 1),
                 yieldUnit: String(parsed.yieldUnit || item.yieldUnit || 'порц'),
                 ingredients: Array.isArray(parsed.ingredients) ? parsed.ingredients : [],
-                note: String(parsed.note || parsed.method || item.method || item.note || '')
+                note: String(parsed.note || parsed.method || parsed.notes || item.method || item.note || '')
               };
             }
           } catch (e) {}
@@ -1283,7 +1280,22 @@ if __name__ == "__main__":
           ings = parseIngredientsFromText(item.ingredientsText || item.composition);
         }
 
-        const rawNote = item.note || item.method || item.description || '';
+        let rawNote = item.note || item.method || item.notes || item.description || item.instructions || item.serving || item.prepMethod || item.text || '';
+        if (!rawNote && item.comment && !String(item.comment).trim().startsWith('{') && !String(item.comment).trim().startsWith('[')) {
+          rawNote = item.comment;
+        }
+        if (!rawNote && typeof item === 'object') {
+          const skipKeys = ['id', 'name', 'product', 'category', 'yieldQty', 'qty', 'yieldUnit', 'unit', 'ingredients', 'ingredientsText', 'composition', 'date', 'time', 'reason', 'bartender', 'json', 'rawJson'];
+          Object.keys(item).forEach(k => {
+            if (!skipKeys.includes(k) && typeof item[k] === 'string' && item[k].trim()) {
+              const val = item[k].trim();
+              if (!val.startsWith('[') && !val.startsWith('{') && val !== String(item.ingredientsText || '').trim()) {
+                rawNote = val;
+              }
+            }
+          });
+        }
+
         const cleanNote = (rawNote && String(rawNote) !== 'undefined') ? String(rawNote).trim() : '';
 
         return {
@@ -1370,9 +1382,9 @@ if __name__ == "__main__":
 
       let selectedUnit = 'мл';
       let selectedReason = 'Порча продукта';
-      let activeExpiryFilter = 'ALL'; // ALL | RED | YELLOW | GREEN
-      let activeTkCategory = 'ALL'; // ALL | Коктейли | Заготовки | Б/А и Лимонады | Другое
-      let calcMode = 'TARGET'; // TARGET (по нужному выходу) | MULT (по множителю порций)
+      let activeExpiryFilter = 'ALL';
+      let activeTkCategory = 'ALL';
+      let calcMode = 'TARGET';
 
       function loadFromStorage(key, fallback) {
         try {
@@ -1422,11 +1434,27 @@ if __name__ == "__main__":
       }
 
       let isClearingCloud = false;
+      let isSavingRecipeCloud = false;
 
-      // Отправка ТК в облако на верхнем уровне JSON, чтобы скрипт таблицы записывал и Состав (F), и Метод (G), и JSON (H)
+      // Железная отправка ТК в Google Таблицу:
+      // 1) Сначала удаляет старую строку с этим ID (чтобы скрипт всегда выполнял ветку создания новой полной строки с колонкой G!)
+      // 2) Передает описание во всех возможных полях (method, note, notes, description, instructions, serving, comment и всех ключах из doGet)
       async function pushRecipeToCloud(recipeObj) {
         if (!webhookUrl || !recipeObj) return;
+        isSavingRecipeCloud = true;
+        const desc = String(recipeObj.note || recipeObj.method || '').trim();
         const ingText = (recipeObj.ingredients || []).map(i => `${i.name} — ${i.qty} ${i.unit}`).join(' | ');
+
+        const fullRecipeCopy = Object.assign({}, recipeObj, {
+          note: desc,
+          method: desc,
+          notes: desc,
+          description: desc,
+          instructions: desc,
+          serving: desc,
+          comment: desc
+        });
+
         const payload = {
           type: 'recipe',
           action: 'save_recipe',
@@ -1440,17 +1468,57 @@ if __name__ == "__main__":
           unit: recipeObj.yieldUnit || 'порц',
           ingredients: recipeObj.ingredients || [],
           ingredientsText: ingText,
-          method: recipeObj.note || '',
-          note: recipeObj.note || '',
-          description: recipeObj.note || '',
+          composition: ingText,
+          method: desc,
+          note: desc,
+          notes: desc,
+          description: desc,
+          desc: desc,
+          instructions: desc,
+          instruction: desc,
+          serving: desc,
+          serve: desc,
+          methodServing: desc,
+          method_serving: desc,
+          prepMethod: desc,
+          preparation: desc,
+          prep: desc,
+          steps: desc,
+          process: desc,
+          technology: desc,
+          howTo: desc,
+          garnish: desc,
+          details: desc,
+          info: desc,
+          text: desc,
+          recipeNote: desc,
+          recipeMethod: desc,
+          methodNote: desc,
+          tkNote: desc,
+          tkMethod: desc,
+          comment: desc,
           date: getTodayISO(),
           time: getNowTime(),
           reason: RECIPE_REASON_TAG,
           bartender: savedBartender || 'Бармен',
-          comment: JSON.stringify(recipeObj),
-          recipe: recipeObj
+          recipe: fullRecipeCopy
         };
+
+        detectedCloudTkKeys.forEach(k => {
+          payload[k] = desc;
+          fullRecipeCopy[k] = desc;
+        });
+
         try {
+          // Шаг 1: Удаляем старую строку этого ID, чтобы избежать сломанной ветки обновления в старом скрипте
+          await fetch(webhookUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'delete', id: recipeObj.id })
+          });
+
+          // Шаг 2: Записываем полную новую строку со всеми полями
           await fetch(webhookUrl, {
             method: 'POST',
             mode: 'no-cors',
@@ -1459,12 +1527,14 @@ if __name__ == "__main__":
           });
         } catch (err) {
           // ignore
+        } finally {
+          isSavingRecipeCloud = false;
         }
       }
 
       // Загрузка из Google Таблицы (Списания + Сроки + вкладка ТК)
       async function syncFromCloud(showNotification = false) {
-        if (isClearingCloud) return;
+        if (isClearingCloud || isSavingRecipeCloud) return;
         if (!webhookUrl) {
           updateSyncBadge('Локально', false);
           return;
@@ -1477,6 +1547,7 @@ if __name__ == "__main__":
             const cloudWriteOffs = [];
             const cloudExpiries = [];
             const cloudRecipes = [];
+            const recipesToRepairInCloud = [];
 
             data.entries.forEach(rawRow => {
               if (!rawRow || isDeletedId(rawRow.id)) return;
@@ -1501,23 +1572,41 @@ if __name__ == "__main__":
 
             if (Array.isArray(data.recipes)) {
               const seenTkIds = new Set(cloudRecipes.map(x => x.id));
+              const standardTkKeys = ['id', 'name', 'product', 'category', 'yieldQty', 'qty', 'yieldUnit', 'unit', 'ingredients', 'ingredientsText', 'composition', 'json', 'rawJson'];
+
               data.recipes.forEach(tk => {
+                if (tk && typeof tk === 'object') {
+                  Object.keys(tk).forEach(k => {
+                    if (!standardTkKeys.includes(k) && !detectedCloudTkKeys.includes(k)) {
+                      detectedCloudTkKeys.push(k);
+                    }
+                  });
+                }
+
                 const norm = normalizeRecipe(tk);
                 if (norm && !isDeletedId(norm.id)) {
-                  // Если в локальной памяти у этой же ТК есть полный состав/описание, а из таблицы пришел пустой [], сохраняем полный вариант!
-                  const localMatch = recipes.find(loc => String(loc.id) === String(norm.id));
+                  const localMatch = recipes.find(loc => String(loc.id) === String(norm.id) || (loc.name && norm.name && loc.name.toLowerCase() === norm.name.toLowerCase()));
+                  let needsCloudRepair = false;
+
                   if (localMatch) {
                     if ((!norm.ingredients || norm.ingredients.length === 0) && localMatch.ingredients && localMatch.ingredients.length > 0) {
                       norm.ingredients = localMatch.ingredients;
+                      needsCloudRepair = true;
                     }
-                    if (!norm.note && localMatch.note) {
-                      norm.note = localMatch.note;
-                      norm.method = localMatch.note;
+                    const localDesc = String(localMatch.note || localMatch.method || '').trim();
+                    if (!norm.note && localDesc) {
+                      norm.note = localDesc;
+                      norm.method = localDesc;
+                      needsCloudRepair = true;
                     }
                   }
+
                   if (!seenTkIds.has(String(norm.id))) {
                     cloudRecipes.push(norm);
                     seenTkIds.add(String(norm.id));
+                    if (needsCloudRepair) {
+                      recipesToRepairInCloud.push(norm);
+                    }
                   }
                 }
               });
@@ -1531,6 +1620,15 @@ if __name__ == "__main__":
             }
             saveToStorage(STORAGE_KEY, entries);
             saveToStorage(EXPIRY_KEY, expiries);
+
+            // Если в таблице у ТК пропало описание или состав, а локально они есть — автоматически дописываем их в таблицу!
+            if (recipesToRepairInCloud.length > 0) {
+              (async () => {
+                for (const rep of recipesToRepairInCloud) {
+                  await pushRecipeToCloud(rep);
+                }
+              })();
+            }
           }
           updateBadgeAndRecent();
           renderHistory();
@@ -1712,7 +1810,7 @@ if __name__ == "__main__":
         syncCalcInputsWithSelectedRecipe(true);
       }
 
-      function syncCalcInputsWithSelectedRecipe(keepCurrentMultiplier) {
+      function syncCalcInputsWithSelectedRecipe() {
         const rec = getSelectedCalcRecipe();
         if (!rec) {
           renderCalcOutput();
