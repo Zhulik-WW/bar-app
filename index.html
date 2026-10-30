@@ -18,7 +18,7 @@ input[type="date"],input[type="time"]{-webkit-appearance:none;appearance:none;wi
 .custom-scroll::-webkit-scrollbar-thumb{background:#334155;border-radius:4px;}
 @keyframes popIn{0%{opacity:0;transform:scale(.97) translateY(4px);}100%{opacity:1;transform:scale(1) translateY(0);}}
 .animate-pop{animation:popIn .18s ease-out forwards;}
-.ios-tabbar{position:fixed;bottom:max(12px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:calc(100% - 20px);max-width:500px;z-index:50;border-radius:26px;padding:6px; backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);background:rgba(15,23,42,.88);border:1px solid rgba(255,255,255,.1);box-shadow:0 12px 32px rgba(0,0,0,.35);display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px;}
+.ios-tabbar{position:fixed;bottom:max(12px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:calc(100% - 20px);max-width:500px;z-index:50;border-radius:26px;padding:6px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);background:rgba(15,23,42,.88);border:1px solid rgba(255,255,255,.1);box-shadow:0 12px 32px rgba(0,0,0,.35);display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px;}
 .ios-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 2px;border-radius:20px;font-size:10px;font-weight:600;color:#94a3b8;transition:all .18s ease;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ios-tab .ico{font-size:17px;line-height:1;margin-bottom:3px;transition:transform .18s ease;}
 .ios-tab.active{background:rgba(245,158,11,.16);color:#f59e0b;font-weight:700;}
@@ -239,17 +239,16 @@ body.theme-alabaster .ios-tab.active{background:rgba(194,65,12,.12)!important;co
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-start">
           <textarea id="tk-note" rows="2" placeholder="Метод приготовления, бокал, лед, украшение..." class="sm:col-span-2 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"></textarea>
           <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 flex items-center gap-2.5">
-            <div id="tk-photo-preview-wrap" class="hidden w-14 h-14 rounded-2xl overflow-hidden border border-slate-700/50 bg-slate-900 relative shrink-0">
-              <img id="tk-photo-preview-blur" src="" class="absolute inset-0 w-full h-full object-cover blur-sm opacity-40 scale-110">
-              <img id="tk-photo-preview" src="" class="relative z-10 w-full h-full object-contain p-0.5">
+            <div id="tk-photo-preview-wrap" class="hidden w-14 h-14 rounded-2xl overflow-hidden border border-slate-700/50 bg-slate-900 shrink-0">
+              <img id="tk-photo-preview" src="" class="w-full h-full object-cover">
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between mb-1">
-                <span class="text-[10px] uppercase font-bold text-slate-400">📷 Фото HD (1:1)</span>
+                <span class="text-[10px] uppercase font-bold text-slate-400">📷 Фото 1:1 (Авто-кроп)</span>
                 <button type="button" id="tk-photo-clear" onclick="clearTkPhoto()" class="hidden text-[10px] text-rose-400 font-bold">Удалить</button>
               </div>
               <input type="file" id="tk-photo-file" accept="image/*" onchange="handleTkPhoto(this)" class="block w-full text-[11px] text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-amber-400">
-              <span id="tk-photo-status" class="text-[10px] text-slate-500 block mt-0.5 truncate">Сохраняется в Google Диск</span>
+              <span id="tk-photo-status" class="text-[10px] text-slate-500 block mt-0.5 truncate">Авто-квадрат 1000×1000 px</span>
             </div>
           </div>
         </div>
@@ -263,11 +262,9 @@ body.theme-alabaster .ios-tab.active{background:rgba(194,65,12,.12)!important;co
   <!-- TAB 4: КАЛЬКУЛЯТОР ТК -->
   <section id="view-calc" class="hidden max-w-xl mx-auto space-y-4">
     <div class="bg-slate-900 border border-slate-800 rounded-3xl p-4 space-y-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="text-base font-bold text-white">🧮 Калькулятор ТК и Заготовок</h2>
-          <p class="text-xs text-slate-400">Пересчет по нужному объему (мл/л/г/кг) или по порциям</p>
-        </div>
+      <div>
+        <h2 class="text-base font-bold text-white">🧮 Калькулятор ТК и Заготовок</h2>
+        <p class="text-xs text-slate-400">Пересчет по нужному объему (мл/л/г/кг) или по порциям</p>
       </div>
       <div>
         <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Выберите техкарту</label>
@@ -357,9 +354,16 @@ body.theme-alabaster .ios-tab.active{background:rgba(194,65,12,.12)!important;co
       </div>
       <div class="flex items-center justify-between pt-1">
         <button onclick="syncFromCloud(true)" class="text-xs font-semibold text-amber-500">🔄 Принудительно загрузить из таблицы</button>
-        <button onclick="copyAppsScript()" class="text-xs bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">📋 Скопировать скрипт (с Google Drive HD)</button>
+        <button onclick="copyAppsScript()" class="text-xs bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">📋 Скопировать скрипт (Google Drive HD)</button>
       </div>
-      <pre id="gas-code" class="hidden">function doGet(e){return handleReq(e);}
+      <pre id="gas-code" class="hidden">function authorizeDrive(){
+  var folders=DriveApp.getFoldersByName('VagonBar_Photos');
+  var folder=folders.hasNext()?folders.next():DriveApp.createFolder('VagonBar_Photos');
+  var ss=SpreadsheetApp.getActiveSpreadsheet();
+  ['Списания','Сроки','ТК'].forEach(function(n){if(!ss.getSheetByName(n))ss.insertSheet(n);});
+  Logger.log('Готово! '+folder.getUrl());
+}
+function doGet(e){return handleReq(e);}
 function doPost(e){return handleReq(e);}
 function saveImageToDrive(base64Str,name){
   try{
@@ -368,12 +372,12 @@ function saveImageToDrive(base64Str,name){
     var folder=folders.hasNext()?folders.next():DriveApp.createFolder('VagonBar_Photos');
     var split=base64Str.split(',');
     var mime=split[0].match(/:(.*?);/)[1]||'image/jpeg';
-    var ext=mime.indexOf('webp')>-1?'webp':(mime.indexOf('png')>-1?'png':'jpg');
+    var ext=mime.indexOf('webp')&gt;-1?'webp':(mime.indexOf('png')&gt;-1?'png':'jpg');
     var bytes=Utilities.base64Decode(split[1]);
     var blob=Utilities.newBlob(bytes,mime,(name||'tk')+'_'+new Date().getTime()+'.'+ext);
     var file=folder.createFile(blob);
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK,DriveApp.Permission.VIEW);
-    return 'https://drive.google.com/thumbnail?id='+file.getId()+'&sz=w1200';
+    return 'https://drive.google.com/thumbnail?id='+file.getId()+'&amp;sz=w1000';
   }catch(err){return '';}
 }
 function handleReq(e){
@@ -386,11 +390,11 @@ function handleReq(e){
     if(sW.getLastRow()===0)sW.appendRow(['ID','Дата','Время','Бармен','Позиция','Кол-во','Ед.','Причина','Комментарий']);
     if(sE.getLastRow()===0)sE.appendRow(['ID','Позиция','Дата открытия','Срок (дней)','Годен до','Объем','Комментарий']);
     if(sT.getLastRow()===0)sT.appendRow(['ID','Название','Категория','Выход','Ед. выхода','Состав','Метод / Подача','JSON']);
-    if(e&&e.postData&&e.postData.contents){
+    if(e&amp;&amp;e.postData&amp;&amp;e.postData.contents){
       var d=JSON.parse(e.postData.contents);
       if(d.action==='delete'){
-        if(d.id==='__CLEAR_WRITEOFFS__'){if(sW.getLastRow()>1)sW.deleteRows(2,sW.getLastRow()-1);}
-        else{[sW,sE,sT].forEach(function(sh){var r=sh.getDataRange().getValues();for(var i=r.length-1;i>=1;i--){if(String(r[i][0])===String(d.id))sh.deleteRow(i+1);}});}
+        if(d.id==='__CLEAR_WRITEOFFS__'){if(sW.getLastRow()&gt;1)sW.deleteRows(2,sW.getLastRow()-1);}
+        else{[sW,sE,sT].forEach(function(sh){var r=sh.getDataRange().getValues();for(var i=r.length-1;i&gt;=1;i--){if(String(r[i][0])===String(d.id))sh.deleteRow(i+1);}});}
         return ContentService.createTextOutput(JSON.stringify({status:'deleted'})).setMimeType(ContentService.MimeType.JSON);
       }
       if(d.type==='expiry'){
@@ -401,10 +405,10 @@ function handleReq(e){
         var rawImg=d.imageDrive||d.image||'';
         var finalImg=rawImg.indexOf('data:image')===0?saveImageToDrive(rawImg,d.name):rawImg;
         var ings=Array.isArray(d.ingredients)?d.ingredients:[];
-        if(ings.length>0){ings[0]._note=noteText;if(finalImg)ings[0]._image=finalImg;else if(d.image&&!finalImg)ings[0]._image=d.image;}
+        if(ings.length&gt;0){ings[0]._note=noteText;if(finalImg)ings[0]._image=finalImg;else if(d.image&amp;&amp;!finalImg)ings[0]._image=d.image;}
         var ingText=ings.map(function(x){return x.name+': '+x.qty+' '+x.unit;}).join(', ');
         var rowData=[d.id,d.name,d.category,d.yieldQty,d.yieldUnit,ingText,noteText,JSON.stringify(ings)];
-        for(var i=1;i<rows.length;i++){if(String(rows[i][0])===String(d.id)){sT.getRange(i+1,1,1,8).setValues([rowData]);found=true;break;}}
+        for(var i=1;i&lt;rows.length;i++){if(String(rows[i][0])===String(d.id)){sT.getRange(i+1,1,1,8).setValues([rowData]);found=true;break;}}
         if(!found)sT.appendRow(rowData);
         return ContentService.createTextOutput(JSON.stringify({status:'ok',imageUrl:finalImg||d.image||''})).setMimeType(ContentService.MimeType.JSON);
       }else{
@@ -414,7 +418,7 @@ function handleReq(e){
     }
     var wRows=sW.getDataRange().getValues().slice(1).map(function(r){return{id:String(r[0]),date:r[1],time:r[2],staff:r[3],item:r[4],qty:Number(r[5]),unit:r[6],reason:r[7],comment:r[8]};});
     var eRows=sE.getDataRange().getValues().slice(1).map(function(r){return{id:String(r[0]),name:r[1],startDate:r[2],days:Number(r[3]),endDate:r[4],volume:r[5],note:r[6]};});
-    var tRows=sT.getDataRange().getValues().slice(1).map(function(r){var ig=[];try{ig=JSON.parse(r[7]||'[]');}catch(err){}var nt=r[6]||(ig[0]&&ig[0]._note)||'';var im=(ig[0]&&ig[0]._image)||'';return{id:String(r[0]),name:r[1],category:r[2],yieldQty:Number(r[3]),yieldUnit:r[4],note:nt,image:im,ingredients:ig};});
+    var tRows=sT.getDataRange().getValues().slice(1).map(function(r){var ig=[];try{ig=JSON.parse(r[7]||'[]');}catch(err){}var nt=r[6]||(ig[0]&amp;&amp;ig[0]._note)||'';var im=(ig[0]&amp;&amp;ig[0]._image)||'';return{id:String(r[0]),name:r[1],category:r[2],yieldQty:Number(r[3]),yieldUnit:r[4],note:nt,image:im,ingredients:ig};});
     return ContentService.createTextOutput(JSON.stringify({writeoffs:wRows,expiries:eRows,recipes:tRows})).setMimeType(ContentService.MimeType.JSON);
   }finally{lock.releaseLock();}
 }</pre>
@@ -434,12 +438,12 @@ function handleReq(e){
 
 <!-- Модалка просмотра фото ТК -->
 <div id="photo-modal" onclick="closePhotoModal()" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-  <div class="relative max-w-lg w-full bg-slate-900 border border-slate-700 rounded-3xl overflow-hidden shadow-2xl p-3" onclick="event.stopPropagation()">
+  <div class="relative max-w-md w-full bg-slate-900 border border-slate-700 rounded-3xl overflow-hidden shadow-2xl p-3" onclick="event.stopPropagation()">
     <div class="flex items-center justify-between pb-2 px-1">
       <h4 id="photo-modal-title" class="text-sm font-bold text-white truncate">Фото ТК</h4>
       <button onclick="closePhotoModal()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 font-bold text-xs">✕</button>
     </div>
-    <img id="photo-modal-img" src="" class="w-full max-h-[75vh] object-contain rounded-2xl bg-slate-950">
+    <img id="photo-modal-img" src="" class="w-full aspect-square object-cover rounded-2xl bg-slate-950">
   </div>
 </div>
 
@@ -487,7 +491,7 @@ function normalizeRecipe(r){
   const imgFromIng=ings.length>0&&ings[0]&&ings[0]._image?String(ings[0]._image):'';
   const note=String(r.note||r.method||r.description||noteFromIng||'').trim();
   const image=String(r.image||imgFromIng||'').trim();
-  const cleanIngs=ings.map((ig,idx)=>({name:String(ig.name||'').trim(),qty: parseFloat(ig.qty)||0,unit:String(ig.unit||'мл').trim(),...(idx===0?{_note:note,_image:image}:{})})).filter(ig=>ig.name);
+  const cleanIngs=ings.map((ig,idx)=>({name:String(ig.name||'').trim(),qty:parseFloat(ig.qty)||0,unit:String(ig.unit||'мл').trim(),...(idx===0?{_note:note,_image:image}:{})})).filter(ig=>ig.name);
   return {id:String(r.id||'tk_'+Date.now()),name:String(r.name||'Без названия').trim(),category:String(r.category||'Коктейли').trim(),yieldQty:parseFloat(r.yieldQty)||1,yieldUnit:String(r.yieldUnit||'мл').trim(),note,image,ingredients:cleanIngs};
 }
 
@@ -677,7 +681,7 @@ function deleteExpiry(id){
   sendToWebhook({action:'delete',id});renderExpiries();showToast('Снято с контроля');
 }
 
-/* БАЗА ТК + HD ФОТО ЧЕРЕЗ GOOGLE ДИСК (И МИНИАТЮРА 1:1 В ШАПКЕ) */
+/* БАЗА ТК + АВТО-КВАДРАТ 1:1 (1000x1000 px) ДЛЯ GOOGLE ДИСКА */
 function toggleTkForm(show){
   const m=document.getElementById('tk-form-modal');
   const next=typeof show==='boolean'?show:m.classList.contains('hidden');
@@ -694,12 +698,15 @@ function addTkIngRow(){
   document.getElementById('tk-ing-rows').appendChild(d);
 }
 
-function resizeImageCanvas(img,maxSide,mime,quality){
-  let w=img.width,h=img.height;
-  if(w>maxSide||h>maxSide){if(w>h){h=Math.round(h*maxSide/w);w=maxSide;}else{w=Math.round(w*maxSide/h);h=maxSide;}}
-  const c=document.createElement('canvas');c.width=w;c.height=h;
+// Авто-кадрирование любого фото по центру в ровный квадрат 1:1 (size x size)
+function cropSquareCanvas(img,size,mime,quality){
+  const minSide=Math.min(img.width,img.height);
+  const sx=Math.round((img.width-minSide)/2);
+  const sy=Math.round((img.height-minSide)/2);
+  const target=Math.min(size,minSide);
+  const c=document.createElement('canvas');c.width=target;c.height=target;
   const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-  ctx.drawImage(img,0,0,w,h);
+  ctx.drawImage(img,sx,sy,minSide,minSide,0,0,target,target);
   let out=c.toDataURL(mime,quality);
   if(mime==='image/webp'&&out.indexOf('data:image/webp')!==0)out=c.toDataURL('image/jpeg',quality);
   return out;
@@ -707,20 +714,20 @@ function resizeImageCanvas(img,maxSide,mime,quality){
 
 function handleTkPhoto(input){
   const file=input.files&&input.files[0];if(!file)return;
-  const st=document.getElementById('tk-photo-status');if(st)st.textContent='⏳ Обработка HD фото...';
+  const st=document.getElementById('tk-photo-status');if(st)st.textContent='⏳ Кадрирование 1:1 HD...';
   const reader=new FileReader();
   reader.onload=function(e){
     const img=new Image();
     img.onload=function(){
-      // 1. HD-копия (1000px) для загрузки на Google Диск через Apps Script
-      tkPhotoDriveData=resizeImageCanvas(img,1000,'image/jpeg',0.85);
-      // 2. Четкая резервная копия (600px WebP < 42 000 симв.) для ячейки таблицы
-      let fallback=resizeImageCanvas(img,600,'image/webp',0.78);
-      if(fallback.length>43000)fallback=resizeImageCanvas(img,520,'image/webp',0.68);
-      if(fallback.length>43000)fallback=resizeImageCanvas(img,420,'image/jpeg',0.65);
+      // 1. Квадрат 1000x1000 HD для сохранения на Google Диск
+      tkPhotoDriveData=cropSquareCanvas(img,1000,'image/jpeg',0.86);
+      // 2. Квадрат 600x600 WebP (<42 000 симв.) для резервного хранения в ячейке
+      let fallback=cropSquareCanvas(img,600,'image/webp',0.78);
+      if(fallback.length>43000)fallback=cropSquareCanvas(img,500,'image/webp',0.68);
+      if(fallback.length>43000)fallback=cropSquareCanvas(img,420,'image/jpeg',0.65);
       tkPhotoData=fallback;
       setTkPhotoPreview(tkPhotoDriveData);
-      if(st)st.textContent='✅ HD готово (1000px → Google Диск)';
+      if(st)st.textContent='✅ Готово (1000×1000 px)';
     };
     img.src=e.target.result;
   };
@@ -729,21 +736,18 @@ function handleTkPhoto(input){
 function setTkPhotoPreview(src){
   const wrap=document.getElementById('tk-photo-preview-wrap');
   const prev=document.getElementById('tk-photo-preview');
-  const blur=document.getElementById('tk-photo-preview-blur');
   const clr=document.getElementById('tk-photo-clear');
   if(src){
-    prev.src=src;if(blur)blur.src=src;
-    wrap.classList.remove('hidden');clr.classList.remove('hidden');
+    prev.src=src;wrap.classList.remove('hidden');clr.classList.remove('hidden');
   }else{
-    prev.src='';if(blur)blur.src='';
-    wrap.classList.add('hidden');clr.classList.add('hidden');
+    prev.src='';wrap.classList.add('hidden');clr.classList.add('hidden');
   }
 }
 function clearTkPhoto(){
   tkPhotoData='';tkPhotoDriveData='';
   const f=document.getElementById('tk-photo-file');if(f)f.value='';
   setTkPhotoPreview('');
-  const st=document.getElementById('tk-photo-status');if(st)st.textContent='Сохраняется в Google Диск';
+  const st=document.getElementById('tk-photo-status');if(st)st.textContent='Авто-квадрат 1000×1000 px';
 }
 
 function handleSaveRecipe(e){
@@ -795,7 +799,7 @@ function renderRecipes(){
   grid.innerHTML=list.map(r=>`
     <div class="bg-slate-900 border border-slate-800 rounded-3xl p-4 flex flex-col justify-between gap-3 animate-pop">
       <div>
-        <!-- Вариант 1: Шапка с компактной квадратной миниатюрой 1:1 справа -->
+        <!-- Шапка с квадратной миниатюрой 1:1 (заполнение 100% без рамок) -->
         <div class="flex items-start justify-between gap-3 mb-3">
           <div class="min-w-0 flex-1">
             <h3 class="text-base font-extrabold text-white leading-snug break-words">${r.name}</h3>
@@ -805,9 +809,8 @@ function renderRecipes(){
             </div>
           </div>
           ${r.image?`
-          <div onclick="openPhotoModal('${r.id}')" title="Нажмите, чтобы увеличить" class="w-20 h-20 rounded-2xl overflow-hidden border border-slate-700/50 bg-slate-950 relative shrink-0 cursor-pointer group shadow-sm">
-            <img src="${r.image}" loading="lazy" class="absolute inset-0 w-full h-full object-cover blur-md opacity-40 scale-110 pointer-events-none">
-            <img src="${r.image}" alt="${r.name}" loading="lazy" class="relative z-10 w-full h-full object-contain p-0.5 group-hover:scale-105 transition duration-200">
+          <div onclick="openPhotoModal('${r.id}')" title="Нажмите, чтобы увеличить" class="w-20 h-20 rounded-2xl overflow-hidden border border-slate-700/40 bg-slate-950 shrink-0 cursor-pointer group shadow-sm">
+            <img src="${r.image}" alt="${r.name}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition duration-200">
           </div>`:''}
         </div>
         <div class="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-2.5 space-y-1">
@@ -846,7 +849,7 @@ function copyRecipeText(id){
   navigator.clipboard.writeText(txt);showToast('ТК скопирована для Telegram');
 }
 
-/* КАЛЬКУЛЯТОР ТК (В ОТДЕЛЬНОЙ ВКЛАДКЕ С ПЕРЕСЧЕТОМ МЛ/Л И Г/КГ) */
+/* КАЛЬКУЛЯТОР ТК */
 function openInCalc(id){
   switchTab('calc');
   document.getElementById('calc-recipe-select').value=id;
