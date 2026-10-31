@@ -85,22 +85,59 @@ body.theme-alabaster .ios-tab.active{background:rgba(194,65,12,.12)!important;co
       <div id="staff-chips" class="flex items-center gap-1.5 overflow-x-auto custom-scroll pb-0.5"></div>
     </div>
 
+    <!-- РАСКРЫВАЕМАЯ И РЕДАКТИРУЕМАЯ ПАНЕЛЬ БЫСТРЫХ КНОПОК -->
     <div class="bg-slate-900 border border-slate-800 rounded-3xl p-3.5">
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">⚡ Быстрый выбор</span>
-        <button type="button" onclick="toggleAddPreset()" class="text-xs font-semibold text-amber-500">+ Своя кнопка</button>
-      </div>
-      <div id="add-preset-box" class="hidden mb-2.5 p-2.5 bg-slate-950 rounded-2xl border border-slate-800">
-        <div class="flex gap-1.5">
-          <input type="text" id="new-preset-name" placeholder="Напр: Мята / Лайм" class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white">
-          <select id="new-preset-unit" class="bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-xs text-white"><option value="мл">мл</option><option value="г">г</option><option value="шт">шт</option><option value="л">л</option><option value="кг">кг</option></select>
-          <button type="button" onclick="saveCustomPreset()" class="bg-amber-500 text-slate-950 font-bold px-3 py-1.5 rounded-xl text-xs">ОК</button>
+      <div class="flex items-center justify-between gap-2 mb-2.5 flex-wrap">
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">⚡ Быстрый выбор</span>
+          <button type="button" id="preset-expand-btn" onclick="togglePresetsExpand()" class="text-[11px] font-bold text-slate-400 bg-slate-950 border border-slate-800 px-2 py-0.5 rounded-lg">▾ Все</button>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button type="button" id="preset-edit-mode-btn" onclick="togglePresetsEditMode()" class="text-xs font-semibold px-2.5 py-1 rounded-xl bg-slate-950 border border-slate-800 text-slate-300">✏️ Редакт.</button>
+          <button type="button" onclick="openPresetEditor(-1)" class="text-xs font-bold px-2.5 py-1 rounded-xl bg-amber-500/15 text-amber-500 border border-amber-500/30">+ Своя</button>
         </div>
       </div>
-      <div id="preset-chips" class="flex gap-1.5 overflow-x-auto custom-scroll pb-1"></div>
+
+      <!-- Форма добавления / редактирования быстрой кнопки -->
+      <div id="add-preset-box" class="hidden mb-3 p-3 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+        <div class="flex items-center justify-between">
+          <span id="preset-form-title" class="text-[11px] font-bold text-white">Новая быстрая кнопка</span>
+          <button type="button" onclick="closePresetEditor()" class="text-[11px] text-slate-400">✕ Закрыть</button>
+        </div>
+        <input type="hidden" id="edit-preset-idx" value="-1">
+        <div class="flex gap-1.5">
+          <input type="text" id="new-preset-icon" placeholder="🍸" maxlength="4" class="w-12 text-center bg-slate-900 border border-slate-700 rounded-xl px-1.5 py-2 text-sm text-white">
+          <input type="text" id="new-preset-name" placeholder="Напр: Сок апельсин / Мята" class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+          <select id="new-preset-unit" class="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs font-bold text-white">
+            <option value="мл">мл</option><option value="г">г</option><option value="шт">шт</option><option value="л">л</option><option value="кг">кг</option>
+          </select>
+          <button type="button" onclick="saveCustomPreset()" class="bg-amber-500 text-slate-950 font-bold px-3.5 py-2 rounded-xl text-xs shrink-0">Сохранить</button>
+        </div>
+      </div>
+
+      <!-- Подсказка в режиме редактирования -->
+      <div id="preset-edit-hint" class="hidden mb-2 flex items-center justify-between text-[11px] text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-1.5">
+        <span>Нажмите на кнопку для изменения или «✕» для удаления</span>
+        <button type="button" onclick="resetDefaultPresets()" class="underline font-semibold ml-2 shrink-0">Сбросить</button>
+      </div>
+
+      <!-- Плитка кнопок с переносом (ничего не уходит за границы) -->
+      <div id="preset-chips" class="flex flex-wrap gap-1.5"></div>
     </div>
 
     <form id="writeoff-form" onsubmit="handleAddEntry(event)" class="bg-slate-900 border border-slate-800 rounded-3xl p-4 space-y-3.5">
+      <!-- Плашка привязки к Срокам (появляется при нажатии "Списать" во вкладке Сроки) -->
+      <div id="linked-expiry-banner" class="hidden bg-rose-500/10 border border-rose-500/30 rounded-2xl p-3 space-y-2">
+        <div class="flex items-center justify-between gap-2">
+          <div class="text-xs font-bold text-rose-400 truncate" id="linked-expiry-title">⏳ Списание со сроков: —</div>
+          <button type="button" onclick="clearLinkedExpiry()" class="text-[11px] text-slate-400 hover:text-white shrink-0">✕ Отвязать</button>
+        </div>
+        <div class="grid grid-cols-2 gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <button type="button" id="exp-act-remove" onclick="setExpiryWriteoffAction('remove')" class="py-1.5 px-2 rounded-lg text-[11px] font-bold bg-rose-500 text-white transition">🗑️ Убрать из сроков</button>
+          <button type="button" id="exp-act-deduct" onclick="setExpiryWriteoffAction('deduct')" class="py-1.5 px-2 rounded-lg text-[11px] font-bold text-slate-400 transition">➖ Вычесть из остатка</button>
+        </div>
+      </div>
+
       <div>
         <label class="block text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Позиция / Продукт</label>
         <div class="relative">
@@ -120,7 +157,7 @@ body.theme-alabaster .ios-tab.active{background:rgba(194,65,12,.12)!important;co
             <button type="button" onclick="setUnit('кг')" data-unit="кг" class="unit-btn rounded-xl text-xs py-2 text-slate-300">кг</button>
           </div>
         </div>
-        <div class="flex gap-1.5 mt-2 overflow-x-auto custom-scroll pb-0.5">
+        <div class="flex flex-wrap gap-1.5 mt-2">
           <button type="button" onclick="addQuickQty(1)" class="text-xs bg-slate-800 px-2.5 py-1 rounded-lg text-slate-300 border border-slate-700">+1</button>
           <button type="button" onclick="addQuickQty(5)" class="text-xs bg-slate-800 px-2.5 py-1 rounded-lg text-slate-300 border border-slate-700">+5</button>
           <button type="button" onclick="addQuickQty(25)" class="text-xs bg-slate-800 px-2.5 py-1 rounded-lg text-slate-300 border border-slate-700">+25</button>
@@ -182,7 +219,7 @@ body.theme-alabaster .ios-tab.active{background:rgba(194,65,12,.12)!important;co
             </div>
           </div>
           <div class="grid grid-cols-2 gap-2">
-            <input type="text" id="prep-vol" placeholder="Объем (напр. 1.5 л)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white">
+            <input type="text" id="prep-vol" placeholder="Объем (напр. 0.95 л)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white">
             <input type="text" id="prep-note" placeholder="Комментарий / кто сварил" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white">
           </div>
           <button type="submit" class="w-full bg-amber-500 text-slate-950 font-bold py-3 rounded-2xl text-xs shadow">⏳ Поставить на контроль</button>
@@ -470,6 +507,8 @@ const DEFAULT_CLOUD_URL='https://script.google.com/macros/s/AKfycbxJZ0ZjTP3Hyz0D
 
 let entries=[],staffList=[],presets=[],expiries=[],recipes=[],deletedIds=[];
 let currentUnit='мл',currentReason='Порча',expiryFilter='all',tkCategory='all',calcMode='volume',tkPhotoData='',tkPhotoDriveData='',currentTheme='bento';
+let presetsExpanded=false,presetsEditMode=false;
+let linkedExpiryId=null,expiryWriteoffAction='remove';
 
 const defaultPresets=[{name:'Мята свежая',unit:'г',icon:'🌿'},{name:'Лайм',unit:'шт',icon:'🍋‍🟩'},{name:'Лимон',unit:'шт',icon:'🍋'},{name:'Апельсин',unit:'шт',icon:'🍊'},{name:'Сливки',unit:'мл',icon:'🥛'},{name:'Пюре маракуйя',unit:'г',icon:'🥭'},{name:'Сахарный сироп',unit:'мл',icon:'🍯'},{name:'Пиво разливное',unit:'мл',icon:'🍺'}];
 const defaultRecipes=[
@@ -519,7 +558,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   try{deletedIds=JSON.parse(localStorage.getItem(DELETED_KEY)||'[]');}catch(e){deletedIds=[];}
   try{entries=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]').map(x=>({...x,date:normalizeDateStr(x.date),time:normalizeTimeStr(x.time)}));}catch(e){entries=[];}
   try{staffList=JSON.parse(localStorage.getItem(STAFF_KEY)||'["Алексей","Мария","Денис"]');}catch(e){staffList=['Алексей','Мария'];}
-  try{presets=JSON.parse(localStorage.getItem(PRESETS_KEY)||'null')||defaultPresets;}catch(e){presets=defaultPresets;}
+  try{presets=JSON.parse(localStorage.getItem(PRESETS_KEY)||'null')||defaultPresets;}catch(e){presets=[...defaultPresets];}
   try{expiries=JSON.parse(localStorage.getItem(EXPIRY_KEY)||'[]');}catch(e){expiries=[];}
   try{const rawTk=JSON.parse(localStorage.getItem(TK_KEY)||'null');recipes=(rawTk&&rawTk.length?rawTk:defaultRecipes).map(normalizeRecipe);}catch(e){recipes=defaultRecipes.map(normalizeRecipe);}
 
@@ -556,9 +595,107 @@ function renderStaffChips(){
 }
 function selectStaff(name){document.getElementById('inp-staff').value=name;}
 
+/* РАСКРЫВАЕМАЯ И РЕДАКТИРУЕМАЯ ПАНЕЛЬ БЫСТРЫХ КНОПОК */
 function renderPresets(){
   const box=document.getElementById('preset-chips');
-  box.innerHTML=presets.map((p,i)=>`<button type="button" onclick="applyPreset(${i})" class="flex items-center gap-1.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 px-3 py-1.5 rounded-2xl text-xs font-medium text-slate-200 shrink-0"><span>${p.icon||'🍸'}</span><span>${p.name}</span><span class="text-[10px] text-slate-400">${p.unit}</span></button>`).join('');
+  const expBtn=document.getElementById('preset-expand-btn');
+  const editBtn=document.getElementById('preset-edit-mode-btn');
+  const hint=document.getElementById('preset-edit-hint');
+  const limit=6;
+  const showAll=presetsExpanded||presetsEditMode||presets.length<=limit;
+  const visible=showAll?presets:presets.slice(0,limit);
+
+  if(expBtn){
+    if(presets.length<=limit){expBtn.classList.add('hidden');}
+    else{
+      expBtn.classList.remove('hidden');
+      expBtn.textContent=showAll?`▴ Свернуть (${presets.length})`:`▾ Все (${presets.length})`;
+    }
+  }
+  if(editBtn){
+    editBtn.className='text-xs font-semibold px-2.5 py-1 rounded-xl border transition '+(presetsEditMode?'bg-amber-500 text-slate-950 border-amber-500 font-bold':'bg-slate-950 border-slate-800 text-slate-300');
+    editBtn.textContent=presetsEditMode?'✓ Готово':'✏️ Редакт.';
+  }
+  if(hint)hint.classList.toggle('hidden',!presetsEditMode);
+
+  box.innerHTML=visible.map((p,i)=>{
+    if(presetsEditMode){
+      return `<div class="inline-flex items-center gap-1 bg-slate-950 border border-amber-500/50 pl-2.5 pr-1.5 py-1 rounded-2xl text-xs font-medium text-slate-200 animate-pop">
+        <button type="button" onclick="openPresetEditor(${i})" class="flex items-center gap-1 text-left">
+          <span>${p.icon||'🍸'}</span><span>${p.name}</span><span class="text-[10px] text-amber-500 font-bold">${p.unit}</span><span class="text-[10px] text-slate-400 ml-0.5">✏️</span>
+        </button>
+        <button type="button" onclick="deletePreset(${i})" class="w-5 h-5 rounded-full bg-rose-500/15 text-rose-400 font-bold text-[10px] flex items-center justify-center ml-1">✕</button>
+      </div>`;
+    }
+    return `<button type="button" onclick="applyPreset(${i})" class="inline-flex items-center gap-1.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 px-3 py-1.5 rounded-2xl text-xs font-medium text-slate-200 transition active:scale-95"><span>${p.icon||'🍸'}</span><span>${p.name}</span><span class="text-[10px] text-slate-400">${p.unit}</span></button>`;
+  }).join('');
+}
+
+function togglePresetsExpand(){
+  presetsExpanded=!presetsExpanded;
+  renderPresets();
+}
+function togglePresetsEditMode(){
+  presetsEditMode=!presetsEditMode;
+  if(!presetsEditMode)closePresetEditor();
+  renderPresets();
+}
+function openPresetEditor(idx=-1){
+  const box=document.getElementById('add-preset-box');
+  const title=document.getElementById('preset-form-title');
+  const idxInp=document.getElementById('edit-preset-idx');
+  const icoInp=document.getElementById('new-preset-icon');
+  const nameInp=document.getElementById('new-preset-name');
+  const unitInp=document.getElementById('new-preset-unit');
+  box.classList.remove('hidden');
+  idxInp.value=idx;
+  if(idx>=0&&presets[idx]){
+    title.textContent='✏️ Редактировать кнопку';
+    icoInp.value=presets[idx].icon||'🍸';
+    nameInp.value=presets[idx].name||'';
+    unitInp.value=presets[idx].unit||'мл';
+  }else{
+    title.textContent='➕ Новая быстрая кнопка';
+    icoInp.value='⚡';
+    nameInp.value='';
+    unitInp.value='мл';
+  }
+  nameInp.focus();
+}
+function closePresetEditor(){
+  document.getElementById('add-preset-box').classList.add('hidden');
+  document.getElementById('edit-preset-idx').value='-1';
+}
+function saveCustomPreset(){
+  const idx=parseInt(document.getElementById('edit-preset-idx').value);
+  const icon=(document.getElementById('new-preset-icon').value||'⚡').trim();
+  const name=document.getElementById('new-preset-name').value.trim();
+  const unit=document.getElementById('new-preset-unit').value;
+  if(!name){showToast('Введите название кнопки','⚠️');return;}
+  if(idx>=0&&presets[idx]){
+    presets[idx]={name,unit,icon};
+    showToast('Кнопка обновлена');
+  }else{
+    presets.unshift({name,unit,icon});
+    showToast('Кнопка добавлена');
+  }
+  localStorage.setItem(PRESETS_KEY,JSON.stringify(presets));
+  closePresetEditor();
+  renderPresets();
+}
+function deletePreset(idx){
+  if(!presets[idx])return;
+  const removed=presets.splice(idx,1)[0];
+  localStorage.setItem(PRESETS_KEY,JSON.stringify(presets));
+  renderPresets();
+  showToast(`Удалено: ${removed.name}`,'🗑️');
+}
+function resetDefaultPresets(){
+  if(!confirm('Вернуть стандартный набор быстрых кнопок?'))return;
+  presets=[...defaultPresets];
+  localStorage.setItem(PRESETS_KEY,JSON.stringify(presets));
+  renderPresets();
+  showToast('Стандартные кнопки восстановлены');
 }
 function applyPreset(i){
   const p=presets[i];if(!p)return;
@@ -566,17 +703,12 @@ function applyPreset(i){
   document.getElementById('clear-item-btn').classList.remove('hidden');
   setUnit(p.unit);document.getElementById('inp-qty').focus();
 }
-function toggleAddPreset(){document.getElementById('add-preset-box').classList.toggle('hidden');}
-function saveCustomPreset(){
-  const name=document.getElementById('new-preset-name').value.trim(),unit=document.getElementById('new-preset-unit').value;
-  if(!name)return;
-  presets.unshift({name,unit,icon:'⚡'});
-  localStorage.setItem(PRESETS_KEY,JSON.stringify(presets));
-  document.getElementById('new-preset-name').value='';
-  document.getElementById('add-preset-box').classList.add('hidden');
-  renderPresets();showToast('Кнопка добавлена');
+function clearItemInput(){
+  document.getElementById('inp-item').value='';
+  document.getElementById('clear-item-btn').classList.add('hidden');
+  clearLinkedExpiry();
+  document.getElementById('inp-item').focus();
 }
-function clearItemInput(){document.getElementById('inp-item').value='';document.getElementById('clear-item-btn').classList.add('hidden');document.getElementById('inp-item').focus();}
 document.getElementById('inp-item').addEventListener('input',e=>{document.getElementById('clear-item-btn').classList.toggle('hidden',!e.target.value);});
 
 function setUnit(u){
@@ -592,6 +724,28 @@ function setReason(r){
   document.querySelectorAll('.reason-chip').forEach(b=>b.classList.toggle('active',b.dataset.reason===r));
 }
 
+/* ПРИВЯЗКА И АВТО-СНЯТИЕ СО СРОКОВ ПРИ СПИСАНИИ */
+function setExpiryWriteoffAction(act){
+  expiryWriteoffAction=act;
+  document.getElementById('exp-act-remove').className='py-1.5 px-2 rounded-lg text-[11px] font-bold transition '+(act==='remove'?'bg-rose-500 text-white':'text-slate-400');
+  document.getElementById('exp-act-deduct').className='py-1.5 px-2 rounded-lg text-[11px] font-bold transition '+(act==='deduct'?'bg-amber-500 text-slate-950':'text-slate-400');
+}
+function clearLinkedExpiry(){
+  linkedExpiryId=null;
+  document.getElementById('linked-expiry-banner').classList.add('hidden');
+}
+function parseVolumeString(volStr){
+  if(!volStr)return null;
+  const s=String(volStr).trim().replace(',','.');
+  const m=s.match(/([\d.]+)\s*(мл|л|г|кг|шт)?/i);
+  if(!m)return null;
+  const val=parseFloat(m[1]);
+  if(isNaN(val)||val<=0)return null;
+  const rawU=(m[2]||'мл').toLowerCase();
+  const unit=['мл','л','г','кг','шт'].includes(rawU)?rawU:'мл';
+  return {val,unit};
+}
+
 function handleAddEntry(e){
   e.preventDefault();
   const item=document.getElementById('inp-item').value.trim(),qty=parseFloat(document.getElementById('inp-qty').value),staff=document.getElementById('inp-staff').value.trim()||'Бармен',date=normalizeDateStr(document.getElementById('inp-date').value),comment=document.getElementById('inp-comment').value.trim();
@@ -601,8 +755,54 @@ function handleAddEntry(e){
   entries.unshift(entry);
   localStorage.setItem(STORAGE_KEY,JSON.stringify(entries));
   sendToWebhook({type:'writeoff',...entry});
+
+  // Если списание было вызвано кнопкой "🥀 Списать" из вкладки "⏳ Сроки"
+  let expiryMsg='';
+  if(linkedExpiryId){
+    const expIdx=expiries.findIndex(x=>String(x.id)===String(linkedExpiryId));
+    if(expIdx>=0){
+      const expItem=expiries[expIdx];
+      const parsed=parseVolumeString(expItem.volume);
+      if(expiryWriteoffAction==='deduct'&&parsed){
+        const baseOrig=toBaseAmount(parsed.val,parsed.unit);
+        const baseWrote=toBaseAmount(qty,currentUnit);
+        const remBase=Math.round((baseOrig-baseWrote)*100)/100;
+        if(remBase>0){
+          let newVolStr='';
+          if(parsed.unit==='л'||parsed.unit==='кг'){
+            newVolStr=(Math.round((remBase/1000)*1000)/1000)+' '+parsed.unit;
+          }else{
+            newVolStr=remBase+' '+parsed.unit;
+          }
+          const oldId=expItem.id;
+          const updatedPrep={...expItem,id:'exp_'+Date.now(),volume:newVolStr};
+          expiries[expIdx]=updatedPrep;
+          markDeleted(oldId);
+          localStorage.setItem(EXPIRY_KEY,JSON.stringify(expiries));
+          sendToWebhook({action:'delete',id:oldId});
+          sendToWebhook({type:'expiry',...updatedPrep});
+          expiryMsg=` • В сроках осталось ${newVolStr}`;
+        }else{
+          expiries.splice(expIdx,1);
+          markDeleted(expItem.id);
+          localStorage.setItem(EXPIRY_KEY,JSON.stringify(expiries));
+          sendToWebhook({action:'delete',id:expItem.id});
+          expiryMsg=' • Убрано из сроков';
+        }
+      }else{
+        expiries.splice(expIdx,1);
+        markDeleted(expItem.id);
+        localStorage.setItem(EXPIRY_KEY,JSON.stringify(expiries));
+        sendToWebhook({action:'delete',id:expItem.id});
+        expiryMsg=' • Убрано из сроков';
+      }
+      renderExpiries();
+    }
+    clearLinkedExpiry();
+  }
+
   document.getElementById('inp-item').value='';document.getElementById('inp-qty').value='';document.getElementById('inp-comment').value='';document.getElementById('clear-item-btn').classList.add('hidden');
-  showToast(`Списано: ${item} (${qty} ${currentUnit})`);
+  showToast(`Списано: ${item} (${qty} ${currentUnit})${expiryMsg}`);
 }
 
 function renderEntries(){
@@ -671,8 +871,20 @@ function renderExpiries(){
 }
 function writeoffFromExpiry(id){
   const p=expiries.find(x=>String(x.id)===String(id));if(!p)return;
-  switchTab('form');document.getElementById('inp-item').value=p.name;setReason('Порча');
-  document.getElementById('inp-comment').value=`Истек срок (${normalizeDateStr(p.endDate)})`;
+  linkedExpiryId=p.id;
+  setExpiryWriteoffAction('remove');
+  const banner=document.getElementById('linked-expiry-banner');
+  const title=document.getElementById('linked-expiry-title');
+  banner.classList.remove('hidden');
+  title.textContent=`⏳ Со сроков: ${p.name}${p.volume?' ('+p.volume+')':''}`;
+
+  switchTab('form');
+  document.getElementById('inp-item').value=p.name;
+  document.getElementById('clear-item-btn').classList.remove('hidden');
+  const parsed=parseVolumeString(p.volume);
+  if(parsed){setUnit(parsed.unit);}
+  setReason('Порча');
+  document.getElementById('inp-comment').value=`Срок (${normalizeDateStr(p.endDate)})`;
   document.getElementById('inp-qty').focus();
 }
 function deleteExpiry(id){
@@ -698,7 +910,6 @@ function addTkIngRow(){
   document.getElementById('tk-ing-rows').appendChild(d);
 }
 
-// Авто-кадрирование любого фото по центру в ровный квадрат 1:1 (size x size)
 function cropSquareCanvas(img,size,mime,quality){
   const minSide=Math.min(img.width,img.height);
   const sx=Math.round((img.width-minSide)/2);
@@ -719,9 +930,7 @@ function handleTkPhoto(input){
   reader.onload=function(e){
     const img=new Image();
     img.onload=function(){
-      // 1. Квадрат 1000x1000 HD для сохранения на Google Диск
       tkPhotoDriveData=cropSquareCanvas(img,1000,'image/jpeg',0.86);
-      // 2. Квадрат 600x600 WebP (<42 000 симв.) для резервного хранения в ячейке
       let fallback=cropSquareCanvas(img,600,'image/webp',0.78);
       if(fallback.length>43000)fallback=cropSquareCanvas(img,500,'image/webp',0.68);
       if(fallback.length>43000)fallback=cropSquareCanvas(img,420,'image/jpeg',0.65);
@@ -799,7 +1008,6 @@ function renderRecipes(){
   grid.innerHTML=list.map(r=>`
     <div class="bg-slate-900 border border-slate-800 rounded-3xl p-4 flex flex-col justify-between gap-3 animate-pop">
       <div>
-        <!-- Шапка с квадратной миниатюрой 1:1 (заполнение 100% без рамок) -->
         <div class="flex items-start justify-between gap-3 mb-3">
           <div class="min-w-0 flex-1">
             <h3 class="text-base font-extrabold text-white leading-snug break-words">${r.name}</h3>
